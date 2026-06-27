@@ -12,7 +12,6 @@ pub fn generate_cube_faces(
     let (src_width, src_height) = src_image.dimensions();
     let haov_rad = config.partial_config.haov.to_radians();
     let vaov_rad = config.partial_config.vaov.to_radians();
-    let v_offset_rad = config.partial_config.v_offset.to_radians();
     let horizon_pixels = config.partial_config.horizon_pixels;
 
     // Convert normalized [0.0, 1.0] colors to Rgb<u8>
@@ -91,8 +90,7 @@ pub fn generate_cube_faces(
                         Projection::Cylindrical => {
                             let half_vaov = vaov_rad / 2.0;
                             let max_y_cyl = half_vaov.tan();
-                            let adjusted_phi = phi - v_offset_rad;
-                            let y_cyl = adjusted_phi.tan();
+                            let y_cyl = phi.tan();
 
                             if y_cyl.abs() > max_y_cyl {
                                 is_outside = true;
@@ -110,13 +108,12 @@ pub fn generate_cube_faces(
                                 y_base + (horizon_pixels as f64)
                             } else {
                                 let half_vaov = vaov_rad / 2.0;
-                                let adjusted_phi = phi - v_offset_rad;
 
-                                if adjusted_phi.abs() > half_vaov {
+                                if phi.abs() > half_vaov {
                                     is_outside = true;
                                     0.0
                                 } else {
-                                    let normalized_phi = (adjusted_phi / half_vaov + 1.0) / 2.0;
+                                    let normalized_phi = (phi / half_vaov + 1.0) / 2.0;
                                     let y_base = (1.0 - normalized_phi) / 2.0 * (src_height as f64);
                                     y_base + (horizon_pixels as f64)
                                 }
