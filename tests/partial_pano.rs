@@ -1,5 +1,7 @@
-use pano_tiler::config_helper::calculate_cylindrical_pano_config;
-use pano_tiler::{PartialPanoConfig, Projection, TilerConfig, process_panorama, save_to_disk};
+use pano_tiler::{
+    PartialPanoConfig, Projection, TilerConfig,
+    calculate_pano_angles, process_panorama, save_to_disk,
+};
 use std::path::Path;
 
 #[test]
@@ -16,12 +18,18 @@ fn test_generate_multires_panorama() {
     let height = 3296;
     let focal_length_35mm_eq = 24.0;
     let crop_factor = 0.9; // Pano stitch crop factor
-    let pano_config =
-        calculate_cylindrical_pano_config(focal_length_35mm_eq, width, height, crop_factor)
-            .unwrap();
+
+    let angles = calculate_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
     let config = TilerConfig {
         projection: Projection::Cylindrical,
-        partial_config: pano_config,
+        partial_config: PartialPanoConfig {
+            haov: angles.haov,
+            vaov: angles.vaov,
+            v_offset: 0.0,
+            horizon_pixels: 0,
+            background_color: [0.0, 0.0, 0.0],
+            avoid_showing_background: true,
+        },
         tile_size: 512,
         fallback_size: 1024,
         cube_size: 0,

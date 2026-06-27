@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use crate::config::TilerConfig;
 
 /// A representation of an individual generated tile.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TileItem {
     pub level: u32,
     pub face: char,
@@ -12,12 +13,14 @@ pub struct TileItem {
 }
 
 /// A representation of a fallback cube face tile.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FallbackItem {
     pub face: char,
     pub image: RgbImage,
 }
 
 /// Container holding the raw outputs of the multi-resolution pipeline.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedTiles {
     pub tiles: Vec<TileItem>,
     pub fallback_tiles: Vec<FallbackItem>,

@@ -28,8 +28,8 @@ mod tests {
 
     #[test]
     fn test_b83_padded_values() {
-        // Matches Python: int(100 // 83^1) % 83 -> 1 ('1')
-        //                 int(100 // 83^0) % 83 -> 17 ('H')
+        // Matches : int(100 // 83^1) % 83 -> 1 ('1')
+        //           int(100 // 83^0) % 83 -> 17 ('H')
         assert_eq!(encode(&[100], 2), "1H");
     }
 }
