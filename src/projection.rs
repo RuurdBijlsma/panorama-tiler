@@ -28,8 +28,8 @@ pub fn generate_cube_faces(
         ('b', PI, 0.0),                      // back
         ('u', 0.0, -FRAC_PI_2),              // up
         ('d', 0.0, FRAC_PI_2),               // down
-        ('l', FRAC_PI_2, 0.0),               // left
-        ('r', -FRAC_PI_2, 0.0),              // right
+        ('l', -FRAC_PI_2, 0.0),              // left
+        ('r', FRAC_PI_2, 0.0),               // right
     ];
 
     face_setups.into_par_iter().map(|(letter, yaw, pitch)| {

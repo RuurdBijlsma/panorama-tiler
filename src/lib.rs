@@ -94,10 +94,10 @@ pub fn process_panorama(
     let extension = if config.png_output { "png".to_string() } else { "jpg".to_string() };
 
     let multires = config::MultiResConfig {
-        sht_hash: None, // Excluded for simplicity (requires heavy pyshtools library replacement)
+        sht_hash: None,
         equirectangular_thumbnail: None,
         missing_tiles: generated_tiles.missing_tiles_str.clone(),
-        path: format!("/%l/%s%y_%x.{}", extension),
+        path: "/%l/%s%y_%x".to_string(),
         fallback_path: if config.fallback_size > 0 { Some("/fallback/%s".to_string()) } else { None },
         extension,
         tile_resolution: config.tile_size,

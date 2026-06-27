@@ -6,10 +6,7 @@ fn test_generate_multires_panorama() {
     let img_path = Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg");
 
     // Skip the integration test if the input image is not present
-    if !img_path.exists() {
-        println!("Integration test skipped: image not found at {:?}", img_path);
-        return;
-    }
+    assert!(img_path.exists());
 
     // 1. Load the photosphere
     let dynamic_img = image::open(img_path)
@@ -18,18 +15,32 @@ fn test_generate_multires_panorama() {
 
     // 2. Define custom options (Defaults here model a full 360 panorama)
     let config = TilerConfig {
+        // [XMP-GPano] ProjectionType : equirectangular
         projection: Projection::Equirectangular,
+
         partial_config: PartialPanoConfig {
-            haov: -1.0,  // Auto-detect 360.0
-            vaov: -1.0,  // Auto-detect 180.0
-            ..Default::default()
+            // Full panorama coverage
+            haov: 360.0,
+            vaov: 180.0,
+            v_offset: 0.0,
+            horizon_pixels: 0,
+            background_color: [0.0, 0.0, 0.0],
+            avoid_showing_background: false,
         },
+
+        // Standard multires tile sizes (512 is standard for Pannellum)
         tile_size: 512,
+
+        // Fallback cube size for older devices (set to 0 to disable)
         fallback_size: 1024,
-        cube_size: 0,    // 0 lets the library calculate size from the input width
+
+        // Let the library auto-calculate the cube resolution from the 8704px width.
+        // The formula (8704 / PI) will yield a cube face size of 2768px.
+        cube_size: 0,
+
         auto_load: true,
-        png_output: false,
-        quality: 75,
+        png_output: false, // Save as JPG (standard for photo panoramas)
+        quality: 75,       // Output JPEG quality (75 is a balanced default)
     };
 
     // 3. Process the panorama inside the pure Rust pipeline
@@ -42,6 +53,9 @@ fn test_generate_multires_panorama() {
 
     // 4. Save everything to disk
     let output_dir = Path::new("target/test_output");
+    if output_dir.exists(){
+        std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
+    }
     save_to_disk(&tiles, &config_json, output_dir, config.png_output, config.quality)
         .expect("Failed to save tiles and configuration json to target test folder");
 
