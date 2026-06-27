@@ -7,6 +7,7 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
+use crate::tiler::TileItem;
 
 /// High-level orchestration function to process an RgbImage into Pannellum tiles and config.
 pub fn process_panorama(
@@ -149,15 +150,8 @@ pub fn save_to_disk(
         let ext = if png_output { "png" } else { "jpg" };
         let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
         let filepath = level_dir.join(filename);
+        asdf(png_output, tile, &filepath, quality)?;
 
-        if png_output {
-            tile.image.save(&filepath)?;
-        } else {
-            let file = File::create(&filepath)?;
-            let ref mut writer = BufWriter::new(file);
-            let mut encoder = JpegEncoder::new_with_quality(writer, quality);
-            encoder.encode_image(&tile.image)?;
-        }
     }
 
     // 2. Save fallback tiles
@@ -186,5 +180,17 @@ pub fn save_to_disk(
     let file = File::create(config_path)?;
     serde_json::to_writer_pretty(file, config_json)?;
 
+    Ok(())
+}
+
+fn asdf(png_output: bool, tile: &TileItem, filepath: &Path, quality: u8) -> Result<(), TilerError> {
+    if png_output {
+        tile.image.save(&filepath)?;
+    } else {
+        let file = File::create(&filepath)?;
+        let ref mut writer = BufWriter::new(file);
+        let mut encoder = JpegEncoder::new_with_quality(writer, quality);
+        encoder.encode_image(&tile.image)?;
+    }
     Ok(())
 }

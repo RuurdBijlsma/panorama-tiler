@@ -1,5 +1,6 @@
 use crate::config::TilerConfig;
-use image::{Rgb, RgbImage};
+use crate::utils::get_bg_color;
+use image::RgbImage;
 use std::collections::BTreeSet;
 
 /// A representation of an individual generated tile.
@@ -44,19 +45,7 @@ pub fn generate_pyramid(
 ) -> GeneratedTiles {
     let tile_size = config.tile_size.min(actual_cube_size);
     let face_letters = ['f', 'b', 'u', 'd', 'l', 'r'];
-
-    // Map background color to u8 values
-    let bg_color = Rgb([
-        (config.partial_config.background_color[0] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[1] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[2] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-    ]);
+    let bg_color = get_bg_color(config);
 
     let levels = {
         let ratio = (actual_cube_size as f64) / (tile_size as f64);

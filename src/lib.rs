@@ -5,6 +5,7 @@ mod error;
 mod orchestrator;
 mod projection;
 mod tiler;
+mod utils;
 
 pub use config::{PannellumConfig, PartialPanoConfig, Projection, TilerConfig};
 pub use config_helper::*;

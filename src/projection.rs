@@ -1,4 +1,5 @@
 use crate::config::{Projection, TilerConfig};
+use crate::utils::get_bg_color;
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
 use std::f64::consts::{FRAC_PI_2, PI};
@@ -15,17 +16,7 @@ pub fn generate_cube_faces(
     let horizon_pixels = config.partial_config.horizon_pixels;
 
     // Convert normalized [0.0, 1.0] colors to Rgb<u8>
-    let bg_color = Rgb([
-        (config.partial_config.background_color[0] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[1] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[2] * 255.0)
-            .round()
-            .clamp(0.0, 255.0) as u8,
-    ]);
+    let bg_color = get_bg_color(config);
 
     // Hugin standard camera orientation mapping
     let face_setups = vec![
