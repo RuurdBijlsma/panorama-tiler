@@ -7,7 +7,6 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use crate::tiler::TileItem;
 
 /// High-level orchestration function to process an RgbImage into Pannellum tiles and config.
 pub fn process_panorama(
@@ -150,8 +149,7 @@ pub fn save_to_disk(
         let ext = if png_output { "png" } else { "jpg" };
         let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
         let filepath = level_dir.join(filename);
-        asdf(png_output, tile, &filepath, quality)?;
-
+        save_image(&tile.image, &filepath, png_output, quality)?;
     }
 
     // 2. Save fallback tiles
@@ -163,15 +161,7 @@ pub fn save_to_disk(
         for fallback in &generated.fallback_tiles {
             let filename = format!("{}.{}", fallback.face, ext);
             let filepath = fallback_dir.join(filename);
-
-            if png_output {
-                fallback.image.save(&filepath)?;
-            } else {
-                let file = File::create(&filepath)?;
-                let ref mut writer = BufWriter::new(file);
-                let mut encoder = JpegEncoder::new_with_quality(writer, quality);
-                encoder.encode_image(&fallback.image)?;
-            }
+            save_image(&fallback.image, &filepath, png_output, quality)?;
         }
     }
 
@@ -183,14 +173,19 @@ pub fn save_to_disk(
     Ok(())
 }
 
-fn asdf(png_output: bool, tile: &TileItem, filepath: &Path, quality: u8) -> Result<(), TilerError> {
+fn save_image(
+    image: &RgbImage,
+    filepath: &Path,
+    png_output: bool,
+    quality: u8,
+) -> Result<(), TilerError> {
     if png_output {
-        tile.image.save(&filepath)?;
+        image.save(&filepath)?;
     } else {
         let file = File::create(&filepath)?;
         let ref mut writer = BufWriter::new(file);
         let mut encoder = JpegEncoder::new_with_quality(writer, quality);
-        encoder.encode_image(&tile.image)?;
+        encoder.encode_image(image)?;
     }
     Ok(())
 }
