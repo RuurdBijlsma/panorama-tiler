@@ -50,6 +50,9 @@ pub fn process_panorama(
         8 * ((computed / 8.0) as u32)
     };
 
+    let clamped_tile_size = resolved_config.tile_size.min(actual_cube_size);
+    resolved_config.tile_size = clamped_tile_size;
+
     // 1. Generate high-resolution cube faces
     let faces = projection::generate_cube_faces(src_image, &resolved_config, actual_cube_size);
 
@@ -91,7 +94,7 @@ pub fn process_panorama(
         path: "/%l/%s%y_%x".to_string(),
         fallback_path: if config.fallback_size > 0 { Some("/fallback/%s".to_string()) } else { None },
         extension,
-        tile_resolution: config.tile_size,
+        tile_resolution: resolved_config.tile_size,
         max_level: generated_tiles.levels,
         cube_resolution: actual_cube_size,
     };

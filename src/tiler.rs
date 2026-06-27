@@ -42,7 +42,7 @@ pub fn generate_pyramid(
     config: &TilerConfig,
     actual_cube_size: u32,
 ) -> GeneratedTiles {
-    let tile_size = config.tile_size;
+    let tile_size = config.tile_size.min(actual_cube_size);
     let face_letters = ['f', 'b', 'u', 'd', 'l', 'r'];
 
     // Map background color to u8 values
@@ -52,7 +52,6 @@ pub fn generate_pyramid(
         (config.partial_config.background_color[2] * 255.0).round().clamp(0.0, 255.0) as u8,
     ]);
 
-    // Calculate maximum pyramid levels
     let levels = {
         let ratio = (actual_cube_size as f64) / (tile_size as f64);
         let mut l = (ratio.log2().ceil() as u32) + 1;
@@ -62,14 +61,21 @@ pub fn generate_pyramid(
         l
     };
 
+    let mut level_sizes = vec![0; (levels + 1) as usize];
+    let mut current_size = actual_cube_size;
+    for level in (1..=levels).rev() {
+        level_sizes[level as usize] = current_size;
+        current_size /= 2;
+    }
+
     let mut tiles = Vec::new();
     let mut missing_tiles = Vec::new();
 
     for (f_idx, &(letter, ref full_face)) in faces.iter().enumerate() {
-        let mut size = actual_cube_size;
         let mut current_face = full_face.clone();
 
         for level in (1..=levels).rev() {
+            let size = level_sizes[level as usize];
             let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
 
             if level < levels {
@@ -114,7 +120,6 @@ pub fn generate_pyramid(
                     }
                 }
             }
-            size /= 2;
         }
     }
 
@@ -158,8 +163,7 @@ pub fn generate_pyramid(
             if Some(mt.level) != prev_level {
                 missing_str.push('>');
                 missing_str.push_str(&crate::b83::encode(&[mt.level], 1));
-
-                let level_size = actual_cube_size / 2u32.pow(levels - mt.level);
+                let level_size = level_sizes[mt.level as usize];
                 let max_tile_num = ((level_size as f64) / (tile_size as f64)).ceil() as u32 - 1;
                 num_tile_digits = (((max_tile_num + 1) as f64).log(83.0).ceil() as usize).max(1);
             }
