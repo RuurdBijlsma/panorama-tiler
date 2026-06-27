@@ -1,5 +1,6 @@
 /// The character set defined by Pannellum for Base83 compression.
-const B83_CHARS: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~";
+const B83_CHARS: &[u8] =
+    b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~";
 
 /// Encodes an array of unsigned 32-bit integers into a Base83 representation.
 /// Pad length specifies the character allocation per integer value.

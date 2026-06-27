@@ -1,6 +1,6 @@
-use image::{RgbImage, Rgb};
-use std::collections::BTreeSet;
 use crate::config::TilerConfig;
+use image::{Rgb, RgbImage};
+use std::collections::BTreeSet;
 
 /// A representation of an individual generated tile.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,9 +47,15 @@ pub fn generate_pyramid(
 
     // Map background color to u8 values
     let bg_color = Rgb([
-        (config.partial_config.background_color[0] * 255.0).round().clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[1] * 255.0).round().clamp(0.0, 255.0) as u8,
-        (config.partial_config.background_color[2] * 255.0).round().clamp(0.0, 255.0) as u8,
+        (config.partial_config.background_color[0] * 255.0)
+            .round()
+            .clamp(0.0, 255.0) as u8,
+        (config.partial_config.background_color[1] * 255.0)
+            .round()
+            .clamp(0.0, 255.0) as u8,
+        (config.partial_config.background_color[2] * 255.0)
+            .round()
+            .clamp(0.0, 255.0) as u8,
     ]);
 
     let levels = {
@@ -95,13 +101,16 @@ pub fn generate_pyramid(
                     let width = tile_size.min(size - left);
                     let height = tile_size.min(size - upper);
 
-                    let tile_crop = image::imageops::crop_imm(&current_face, left, upper, width, height).to_image();
+                    let tile_crop =
+                        image::imageops::crop_imm(&current_face, left, upper, width, height)
+                            .to_image();
 
                     // Check if the cropped tile contains exclusively background pixels
                     let is_empty = tile_crop.pixels().all(|&pixel| pixel == bg_color);
 
                     // For partial panoramas, discard blank background tiles
-                    let is_partial = config.partial_config.haov < 360.0 || config.partial_config.vaov < 180.0;
+                    let is_partial =
+                        config.partial_config.haov < 360.0 || config.partial_config.vaov < 180.0;
                     if is_partial && is_empty {
                         missing_tiles.push(MissingTile {
                             face_idx: f_idx,

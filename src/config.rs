@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Input projection format of the source image.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

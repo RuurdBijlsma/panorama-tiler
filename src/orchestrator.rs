@@ -1,10 +1,12 @@
+use crate::{
+    GeneratedTiles, PannellumConfig, Projection, TilerConfig, TilerError, config, projection, tiler,
+};
+use image::RgbImage;
+use image::codecs::jpeg::JpegEncoder;
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use image::codecs::jpeg::JpegEncoder;
-use image::RgbImage;
-use crate::{config, projection, tiler, GeneratedTiles, PannellumConfig, Projection, TilerConfig, TilerError};
 
 /// High-level orchestration function to process an RgbImage into Pannellum tiles and config.
 pub fn process_panorama(
@@ -78,21 +80,30 @@ pub fn process_panorama(
         None
     };
 
-    let avoid_showing_background = if config.partial_config.avoid_showing_background && (haov < 360.0 || vaov < 180.0) {
-        Some(true)
-    } else {
-        None
-    };
+    let avoid_showing_background =
+        if config.partial_config.avoid_showing_background && (haov < 360.0 || vaov < 180.0) {
+            Some(true)
+        } else {
+            None
+        };
 
     let auto_load = if config.auto_load { Some(true) } else { None };
-    let extension = if config.png_output { "png".to_string() } else { "jpg".to_string() };
+    let extension = if config.png_output {
+        "png".to_string()
+    } else {
+        "jpg".to_string()
+    };
 
     let multires = config::MultiResConfig {
         sht_hash: None,
         equirectangular_thumbnail: None,
         missing_tiles: generated_tiles.missing_tiles_str.clone(),
         path: "/%l/%s%y_%x".to_string(),
-        fallback_path: if config.fallback_size > 0 { Some("/fallback/%s".to_string()) } else { None },
+        fallback_path: if config.fallback_size > 0 {
+            Some("/fallback/%s".to_string())
+        } else {
+            None
+        },
         extension,
         tile_resolution: resolved_config.tile_size,
         max_level: generated_tiles.levels,
