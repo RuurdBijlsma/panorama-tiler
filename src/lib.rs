@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod projection;
 pub mod tiler;
+pub mod config_helper;
 
 use std::path::Path;
 use std::fs::{self, File};
@@ -105,7 +106,7 @@ pub fn process_panorama(
         cube_resolution: actual_cube_size,
     };
 
-    let p_config = config::PannellumConfig {
+    let p_config = PannellumConfig {
         hfov,
         haov: haov_opt,
         min_yaw,
@@ -129,7 +130,7 @@ pub fn process_panorama(
 /// Helper function to save generated tiles and the config.json file to a given directory.
 pub fn save_to_disk(
     generated: &GeneratedTiles,
-    config_json: &config::PannellumConfig,
+    config_json: &PannellumConfig,
     output_dir: &Path,
     png_output: bool,
     quality: u8,
