@@ -32,7 +32,7 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
                     ..Default::default()
                 }),
             )
-                .expect("Guessed-angles pipeline execution failed");
+            .expect("Guessed-angles pipeline execution failed");
         })
     });
 

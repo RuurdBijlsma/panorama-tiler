@@ -39,6 +39,17 @@ pub enum InterpolationMode {
     Bicubic,
 }
 
+/// Downscaling method used for lower-resolution pyramid levels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum DownscalingMethod {
+    /// Recursively downscale from the previous level. Faster but can accumulate interpolation errors.
+    #[default]
+    Recursive,
+    /// Downscale directly from the full-resolution cube face for each level. Slower but preserves maximum sharpness.
+    Direct,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PanoAngles {
     /// Horizontal Angle of View (degrees, 0.0 to 360.0).
@@ -82,6 +93,8 @@ pub struct OutputConfig {
     pub background_color: [u8; 3],
     /// Constrain viewport boundaries within image limits.
     pub avoid_showing_background: bool,
+    /// Method used to downscale cube faces to generate lower resolution pyramid levels.
+    pub downscaling_method: DownscalingMethod,
 }
 
 impl Default for OutputConfig {
@@ -98,6 +111,7 @@ impl Default for OutputConfig {
             avoid_showing_background: false,
             yaw_padding: 0.0,
             pitch_padding: 0.0,
+            downscaling_method: DownscalingMethod::default(),
         }
     }
 }

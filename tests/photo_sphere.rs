@@ -1,4 +1,6 @@
-use panorama_tiler::{OutputConfig, OutputFormat, TilerConfig, process_panorama, save_to_disk};
+use panorama_tiler::{
+    DownscalingMethod, OutputConfig, OutputFormat, TilerConfig, process_panorama, save_to_disk,
+};
 use std::path::Path;
 
 #[test]
@@ -22,6 +24,44 @@ fn test_generate_multires_panorama() {
             }
         }
     }
+}
+
+#[test]
+fn test_direct_downscaling_quality() {
+    let image_path = Path::new("img/sphere/PXL_20220918_115954889.PHOTOSPHERE.jpg");
+    assert!(image_path.exists());
+
+    let dynamic_img =
+        image::open(image_path).expect("Failed to open source integration test image");
+    let rgb_img = dynamic_img.to_rgb8();
+
+    let config = TilerConfig {
+        output: OutputConfig {
+            downscaling_method: DownscalingMethod::Direct,
+            format: OutputFormat::Webp,
+            quality: 95,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let pano_output = process_panorama(&rgb_img, &config)
+        .expect("Failed to process panorama in the tiler pipeline");
+
+    let output_dir = Path::new("target/sphere_output_direct_HQ");
+    if output_dir.exists() {
+        std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
+    }
+
+    save_to_disk(
+        &pano_output,
+        output_dir,
+        config.output.format,
+        config.output.quality,
+    )
+    .expect("Failed to save tiles and configuration json to target test folder");
+
+    assert!(output_dir.join("config.json").exists());
 }
 
 fn generate_pano(image_path: &Path, output_format: OutputFormat, quality: u8) {

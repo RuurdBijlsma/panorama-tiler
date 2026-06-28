@@ -1,4 +1,4 @@
-use crate::config::TilerConfig;
+use crate::config::{DownscalingMethod, TilerConfig};
 use crate::logic::b83;
 use fast_image_resize as fr;
 use image::{Rgb, RgbImage};
@@ -100,7 +100,10 @@ pub fn generate_pyramid(
         .map(|(f_idx, &(letter, ref full_face))| {
             let mut local_tiles = Vec::new();
             let mut local_missing = Vec::new();
-            let mut current_face = full_face.clone();
+
+            // Temporary allocated space used to hold direct downscaled outputs for cropping
+            let mut current_face_allocated = RgbImage::new(0, 0);
+            let mut recursive_face: Option<RgbImage> = None;
 
             let mut resizer = fr::Resizer::new();
             let resize_options = fr::ResizeOptions::new()
@@ -110,14 +113,32 @@ pub fn generate_pyramid(
                 let size = level_sizes[level as usize];
                 let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
 
-                if level < levels {
-                    // Downscale face recursively using Lanczos3
-                    let mut downscaled = RgbImage::new(size, size);
-                    resizer
-                        .resize(&current_face, &mut downscaled, Some(&resize_options))
-                        .expect("Failed to downscale cube face level");
-                    current_face = downscaled;
-                }
+                let active_face: &RgbImage = if level == levels {
+                    full_face
+                } else {
+                    match config.output.downscaling_method {
+                        DownscalingMethod::Recursive => {
+                            let mut downscaled = RgbImage::new(size, size);
+                            let source = recursive_face.as_ref().unwrap_or(full_face);
+                            resizer
+                                .resize(source, &mut downscaled, Some(&resize_options))
+                                .expect("Failed to downscale cube face level recursively");
+                            recursive_face = Some(downscaled);
+                            recursive_face.as_ref().unwrap()
+                        }
+                        DownscalingMethod::Direct => {
+                            current_face_allocated = RgbImage::new(size, size);
+                            resizer
+                                .resize(
+                                    full_face,
+                                    &mut current_face_allocated,
+                                    Some(&resize_options),
+                                )
+                                .expect("Failed to downscale cube face level directly");
+                            &current_face_allocated
+                        }
+                    }
+                };
 
                 for row in 0..num_tiles_wide_high {
                     for col in 0..num_tiles_wide_high {
@@ -128,7 +149,7 @@ pub fn generate_pyramid(
 
                         // Avoid allocating new sub-images if the entire region is verified empty
                         if is_partial
-                            && is_region_empty(&current_face, left, upper, width, height, bg_color)
+                            && is_region_empty(active_face, left, upper, width, height, bg_color)
                         {
                             local_missing.push(MissingTile {
                                 face_idx: f_idx,
@@ -137,14 +158,9 @@ pub fn generate_pyramid(
                                 row,
                             });
                         } else {
-                            let tile_crop = image::imageops::crop_imm(
-                                &current_face,
-                                left,
-                                upper,
-                                width,
-                                height,
-                            )
-                            .to_image();
+                            let tile_crop =
+                                image::imageops::crop_imm(active_face, left, upper, width, height)
+                                    .to_image();
                             local_tiles.push(TileItem {
                                 level,
                                 face: letter,

@@ -173,7 +173,9 @@ fn bench_full_integration(c: &mut Criterion) {
     };
 
     group.bench_function("process_panorama_4k", |b| {
-        b.iter(|| panorama_tiler::process_panorama(black_box(&src_image), black_box(&config)).unwrap())
+        b.iter(|| {
+            panorama_tiler::process_panorama(black_box(&src_image), black_box(&config)).unwrap()
+        })
     });
 
     group.finish();
