@@ -33,6 +33,10 @@ pub fn generate_cube_faces(
         .map(|(letter, yaw, pitch)| {
             let mut face_img = RgbImage::new(actual_cube_size, actual_cube_size);
 
+            let cos_p = pitch.cos();
+            let sin_p = pitch.sin();
+            let cos_y = yaw.cos();
+            let sin_y = yaw.sin();
             for row in 0..actual_cube_size {
                 for col in 0..actual_cube_size {
                     let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
@@ -43,15 +47,15 @@ pub fn generate_cube_faces(
                     let z_local = 1.0;
 
                     // 1. Pitch rotation (around X-axis)
-                    let cos_p = pitch.cos();
-                    let sin_p = pitch.sin();
+                    let cos_p = cos_p;
+                    let sin_p = sin_p;
                     let x1 = x_local;
                     let y1 = y_local * cos_p - z_local * sin_p;
                     let z1 = y_local * sin_p + z_local * cos_p;
 
                     // 2. Yaw rotation (around Y-axis)
-                    let cos_y = yaw.cos();
-                    let sin_y = yaw.sin();
+                    let cos_y = cos_y;
+                    let sin_y = sin_y;
                     let x2 = x1 * cos_y + z1 * sin_y;
                     let y2 = y1;
                     let z2 = -x1 * sin_y + z1 * cos_y;
