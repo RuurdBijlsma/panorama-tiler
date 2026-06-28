@@ -22,18 +22,10 @@ fn test_generate_multires_panorama() {
         partial_config: PartialPanoConfig {
             haov: angles.haov,
             vaov: angles.vaov,
-            v_offset: 0.0,
-            horizon_pixels: 0,
-            background_color: [0.0, 0.0, 0.0],
             avoid_showing_background: true,
+            ..Default::default()
         },
-        tile_size: 512,
-        fallback_size: 1024,
-        cube_size: 0,
-        auto_load: true,
-        output_format: OutputFormat::Jpeg,
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
 
     // Process the panorama

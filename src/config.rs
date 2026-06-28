@@ -90,7 +90,7 @@ impl Default for TilerConfig {
             tile_size: 512,
             fallback_size: 1024,
             cube_size: 0, // 0 defaults to retaining full detail automatically
-            auto_load: false,
+            auto_load: true,
             output_format: OutputFormat::default(),
             quality: 75,
             interpolation_mode: InterpolationMode::default(),

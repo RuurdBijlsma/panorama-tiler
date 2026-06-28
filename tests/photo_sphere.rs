@@ -1,5 +1,5 @@
 use pano_tiler::{
-    OutputFormat, PartialPanoConfig, Projection, TilerConfig, process_panorama, save_to_disk,
+    process_panorama, save_to_disk, OutputFormat, TilerConfig,
 };
 use std::path::Path;
 
@@ -30,14 +30,9 @@ fn generate_pano(output_format: OutputFormat, quality: u8) {
 
     // Define custom options (Defaults here model a full 360 panorama)
     let config = TilerConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig::default(),
-        tile_size: 512,
-        fallback_size: 1024,
-        cube_size: 0,
-        auto_load: true,
         output_format,
         quality,
+        ..Default::default()
     };
 
     // Process the panorama
