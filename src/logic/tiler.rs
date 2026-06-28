@@ -101,8 +101,6 @@ pub fn generate_pyramid(
             let mut local_tiles = Vec::new();
             let mut local_missing = Vec::new();
 
-            // Temporary allocated space used to hold direct downscaled outputs for cropping
-            let mut current_face_allocated = RgbImage::new(0, 0);
             let mut recursive_face: Option<RgbImage> = None;
 
             let mut resizer = fr::Resizer::new();
@@ -112,6 +110,7 @@ pub fn generate_pyramid(
             for level in (1..=levels).rev() {
                 let size = level_sizes[level as usize];
                 let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
+                let mut current_face_allocated;
 
                 let active_face: &RgbImage = if level == levels {
                     full_face
