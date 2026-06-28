@@ -3,6 +3,7 @@ use crate::utils::get_bg_color;
 use image::RgbImage;
 use rayon::prelude::*;
 use std::collections::BTreeSet;
+use fast_image_resize as fr;
 
 /// A representation of an individual generated tile.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,18 +95,21 @@ pub fn generate_pyramid(
             let mut local_missing = Vec::new();
             let mut current_face = full_face.clone();
 
+            let mut resizer = fr::Resizer::new();
+            let resize_options = fr::ResizeOptions::new()
+                .resize_alg(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3));
+
             for level in (1..=levels).rev() {
                 let size = level_sizes[level as usize];
                 let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
 
                 if level < levels {
-                    // Downscale face recursively using Lanczos algorithm
-                    current_face = image::imageops::resize(
-                        &current_face,
-                        size,
-                        size,
-                        image::imageops::FilterType::Lanczos3,
-                    );
+                    // Downscale face recursively using Lanczos3
+                    let mut downscaled = RgbImage::new(size, size);
+                    resizer
+                        .resize(&current_face, &mut downscaled, Some(&resize_options))
+                        .expect("Failed to downscale cube face level");
+                    current_face = downscaled;
                 }
 
                 for row in 0..num_tiles_wide_high {
@@ -208,13 +212,16 @@ pub fn generate_pyramid(
     // Generate fallback files if fallback size is defined
     let mut fallback_tiles = Vec::new();
     if config.fallback_size > 0 {
+        let mut resizer = fr::Resizer::new();
+        let resize_options = fr::ResizeOptions::new()
+            .resize_alg(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3));
+
         for &(letter, ref full_face) in faces {
-            let resized = image::imageops::resize(
-                full_face,
-                config.fallback_size,
-                config.fallback_size,
-                image::imageops::FilterType::Lanczos3,
-            );
+            let mut resized = RgbImage::new(config.fallback_size, config.fallback_size);
+            resizer
+                .resize(full_face, &mut resized, Some(&resize_options))
+                .expect("Failed to resize fallback face");
+
             fallback_tiles.push(FallbackItem {
                 face: letter,
                 image: resized,
