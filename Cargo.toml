@@ -14,3 +14,10 @@ webp = { version = "0.3.1", optional = true }
 [features]
 default = ["webp"]
 webp = ["dep:webp"]
+
+[dev-dependencies]
+criterion = { version = "0.8.2", features = ["html_reports"] }
+
+[[bench]]
+name = "pano_bench"
+harness = false

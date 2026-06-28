@@ -1,10 +1,11 @@
-mod b83;
+pub mod b83;
+pub mod projection;
+pub mod tiler;
+
 mod config;
 mod config_helper;
 mod error;
 mod orchestrator;
-mod projection;
-mod tiler;
 mod utils;
 
 pub use config::{OutputFormat, PannellumConfig, PartialPanoConfig, Projection, TilerConfig};
