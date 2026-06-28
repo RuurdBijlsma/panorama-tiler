@@ -1,7 +1,4 @@
-use crate::{
-    GeneratedTiles, GeneratorConfig, OutputFormat, PannellumConfig, Projection, TilerError, config,
-    projection, tiler,
-};
+use crate::{GeneratedTiles, GeneratorConfig, OutputFormat, PannellumConfig, Projection, TilerError, config, projection, tiler, PanoExif, exif_to_partial_pano_config, PartialPanoConfig};
 use image::RgbImage;
 use image::codecs::jpeg::JpegEncoder;
 use rayon::prelude::*;
@@ -205,5 +202,191 @@ fn save_image(
             fs::write(filepath, &*encoded_webp)?;
         }
     }
+    Ok(())
+}
+
+/// High-level function to load an image, auto-detect its geometry and pose via
+/// EXIF and GPano XMP metadata, generate the multi-resolution tiles, and write
+/// the output to a directory.
+///
+/// If no metadata is found, it will fallback to aspect-ratio-based heuristics.
+pub fn tile_panorama_file(
+    input_file: &Path,
+    output_dir: &Path,
+    custom_config: Option<GeneratorConfig>,
+) -> Result<(), TilerError> {
+    // 1. Load the actual image file to guarantee exact input resolution
+    let dynamic_img = image::open(input_file)?;
+    let rgb_img = dynamic_img.to_rgb8();
+    let (width, height) = rgb_img.dimensions();
+
+    // 2. Setup initial configuration
+    let mut config = custom_config.unwrap_or_default();
+
+    // 3. Extract EXIF attributes
+    let mut exif_metadata = None;
+    if let Ok(file) = File::open(input_file) {
+        let mut buf_reader = std::io::BufReader::new(file);
+        let exif_reader = exif::Reader::new();
+        if let Ok(parsed_exif) = exif_reader.read_from_container(&mut buf_reader) {
+            exif_metadata = Some(parsed_exif);
+        }
+    }
+
+    // 4. Extract XMP metadata packets
+    let mut xmp_metadata = None;
+    let mut xmp_file = xmpkit::XmpFile::new();
+    if xmp_file.open(input_file).is_ok() {
+        if let Some(parsed_xmp) = xmp_file.get_xmp() {
+            xmp_metadata = Some(parsed_xmp.clone());
+        }
+    }
+
+    // Initialize detection variables
+    let mut detected_gpano = false;
+    let mut haov = None;
+    let mut vaov = None;
+    let mut v_offset = None;
+    let mut horizon_pixels = None;
+    let mut north_offset = None;
+    let mut projection = Projection::Equirectangular;
+
+    // 5. Query Google Photo Sphere (GPano) values
+    if let Some(meta) = &xmp_metadata {
+        let gpano_ns = "http://ns.google.com/photos/1.0/panorama/";
+
+        // Helper to query and safely convert arbitrary XmpValue stringified forms
+        let get_gpano_f64 = |name: &str| -> Option<f64> {
+            meta.get_property(gpano_ns, name)
+                .and_then(|v| v.to_string().parse::<f64>().ok())
+        };
+
+        let projection_type = meta.get_property(gpano_ns, "ProjectionType")
+            .map(|v| v.to_string());
+
+        let cropped_area_height = get_gpano_f64("CroppedAreaImageHeightPixels");
+        let cropped_area_width = get_gpano_f64("CroppedAreaImageWidthPixels");
+        let full_pano_height = get_gpano_f64("FullPanoHeightPixels");
+        let full_pano_width = get_gpano_f64("FullPanoWidthPixels");
+        let cropped_area_top = get_gpano_f64("CroppedAreaTopPixels");
+        let pose_heading = get_gpano_f64("PoseHeadingDegrees");
+
+        if let Some(ref proj_type) = projection_type {
+            if proj_type == "cylindrical" {
+                projection = Projection::Cylindrical;
+            } else {
+                projection = Projection::Equirectangular;
+            }
+        }
+
+        // Check if we have complete partial photo sphere crop boundaries
+        if let (Some(cropped_w), Some(cropped_h), Some(full_w), Some(full_h), Some(cropped_t)) =
+            (cropped_area_width, cropped_area_height, full_pano_width, full_pano_height, cropped_area_top)
+        {
+            detected_gpano = true;
+
+            // Build temporary EXIF container to derive consistent angles and offsets
+            let exif_info = PanoExif {
+                full_pano_width_pixels: full_w as u32,
+                full_pano_height_pixels: full_h as u32,
+                cropped_area_top_pixels: cropped_t as u32,
+                cropped_area_image_width_pixels: cropped_w as u32,
+                cropped_area_image_height_pixels: cropped_h as u32,
+            };
+
+            let partial_config = exif_to_partial_pano_config(&exif_info);
+            haov = Some(partial_config.haov);
+            vaov = Some(partial_config.vaov);
+            v_offset = Some(partial_config.v_offset);
+            horizon_pixels = Some(partial_config.horizon_pixels);
+            north_offset = pose_heading;
+        } else if let Some(pose_heading) = pose_heading {
+            north_offset = Some(pose_heading);
+        }
+    }
+
+    // 6. Cylindrical Sweep detection via focal length EXIF tags
+    if !detected_gpano {
+        let mut focal_length_35mm = None;
+
+        if let Some(exif) = &exif_metadata {
+            if let Some(field) = exif.get_field(exif::Tag::FocalLengthIn35mmFilm, exif::In::PRIMARY) {
+                focal_length_35mm = match &field.value {
+                    exif::Value::Rational(rationals) => rationals.first().map(|r| r.to_f64()),
+                    _ => field.value.get_uint(0).map(|v| v as f64),
+                };
+            }
+        }
+
+        if let Some(focal) = focal_length_35mm {
+            if focal > 0.0 {
+                projection = Projection::Cylindrical;
+                let crop_factor = 0.90; // Standard crop loss ratio for panorama stitches
+                if let Some(angles) = crate::helpers::config_helper::calculate_pano_angles(
+                    focal,
+                    width,
+                    height,
+                    crop_factor,
+                ) {
+                    haov = Some(angles.haov);
+                    vaov = Some(angles.vaov);
+                }
+            }
+        }
+    }
+
+    // 7. Fallback heuristics for un-tagged panoramic images
+    let aspect_ratio = width as f64 / height as f64;
+    if haov.is_none() && vaov.is_none() {
+        if (aspect_ratio - 2.0).abs() <= 0.1 {
+            // Equirectangular Full Photo Sphere
+            projection = Projection::Equirectangular;
+            haov = Some(360.0);
+            vaov = Some(180.0);
+        } else if aspect_ratio >= 2.2 {
+            // Wide image treated as a custom cylindrical sweep (e.g. 24mm default sweep equivalent)
+            projection = Projection::Cylindrical;
+            let crop_factor = 0.90;
+            if let Some(angles) = crate::helpers::config_helper::calculate_pano_angles(
+                24.0,
+                width,
+                height,
+                crop_factor,
+            ) {
+                haov = Some(angles.haov);
+                vaov = Some(angles.vaov);
+            }
+        } else {
+            // Default equirectangular
+            projection = Projection::Equirectangular;
+            haov = Some(360.0);
+            vaov = Some(180.0);
+        }
+    }
+
+    // 8. Apply calculated adjustments to local generator config
+    config.projection = projection;
+    config.partial_config = PartialPanoConfig {
+        haov: haov.unwrap_or(360.0),
+        vaov: vaov.unwrap_or(180.0),
+        v_offset: v_offset.unwrap_or(0.0),
+        horizon_pixels: horizon_pixels.unwrap_or(0),
+    };
+    if north_offset.is_some() {
+        config.north_offset = north_offset;
+    }
+
+    // 9. Execute high-performance multi-resolution processing pipeline
+    let (tiles, config_json, _) = process_panorama(&rgb_img, &config)?;
+
+    // 10. Write final multi-res hierarchy files to target path
+    save_to_disk(
+        &tiles,
+        &config_json,
+        output_dir,
+        config.output_format,
+        config.quality,
+    )?;
+
     Ok(())
 }
