@@ -1,5 +1,5 @@
-use pano_tiler::exif::{exif_to_partial_pano_config, PanoExif};
-use pano_tiler::{process_panorama, save_to_disk, OutputConfig, TilerConfig};
+use pano_tiler::exif::{PanoExif, exif_to_partial_pano_config};
+use pano_tiler::{OutputConfig, TilerConfig, process_panorama, save_to_disk};
 use std::path::{Path, PathBuf};
 
 fn image1_config() -> (PathBuf, TilerConfig) {
@@ -12,7 +12,7 @@ fn image1_config() -> (PathBuf, TilerConfig) {
         full_pano_width_pixels: 15462,
         cropped_area_top_pixels: 282,
         projection_type: Some("equirectangular".to_string()),
-        pose_heading_degrees:Some(135.0),
+        pose_heading_degrees: Some(135.0),
     });
     let config = TilerConfig {
         angles: partial_config,
@@ -31,7 +31,7 @@ fn image2_config() -> (PathBuf, TilerConfig) {
         full_pano_width_pixels: 9306,
         cropped_area_top_pixels: 1605,
         projection_type: Some("equirectangular".to_string()),
-        pose_heading_degrees:Some(87.0),
+        pose_heading_degrees: Some(87.0),
     });
     let config = TilerConfig {
         angles: partial_config,
@@ -39,7 +39,7 @@ fn image2_config() -> (PathBuf, TilerConfig) {
             yaw_padding: 10.0,
             pitch_padding: 5.0,
             ..OutputConfig::default()
-        }
+        },
     };
     (img, config)
 }
@@ -54,7 +54,7 @@ fn image3_config() -> (PathBuf, TilerConfig) {
         full_pano_width_pixels: 13617,
         cropped_area_top_pixels: 918,
         projection_type: Some("equirectangular".to_string()),
-        pose_heading_degrees:Some(215.0),
+        pose_heading_degrees: Some(215.0),
     });
     let config = TilerConfig {
         angles: partial_config,
@@ -73,7 +73,7 @@ fn image4_config() -> (PathBuf, TilerConfig) {
         full_pano_width_pixels: 13918,
         cropped_area_top_pixels: 0,
         projection_type: Some("equirectangular".to_string()),
-        pose_heading_degrees:Some(123.0),
+        pose_heading_degrees: Some(123.0),
     });
     let config = TilerConfig {
         angles: partial_config,
@@ -92,7 +92,7 @@ fn image5_config() -> (PathBuf, TilerConfig) {
         full_pano_width_pixels: 7896,
         cropped_area_top_pixels: 1604,
         projection_type: Some("equirectangular".to_string()),
-        pose_heading_degrees:Some(278.0),
+        pose_heading_degrees: Some(278.0),
     });
     let config = TilerConfig {
         angles: partial_config,

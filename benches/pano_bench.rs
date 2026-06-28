@@ -169,7 +169,7 @@ fn bench_full_integration(c: &mut Criterion) {
             fallback_size: 1024,
             cube_size: 0,
             ..Default::default()
-        }
+        },
     };
 
     group.bench_function("process_panorama_4k", |b| {

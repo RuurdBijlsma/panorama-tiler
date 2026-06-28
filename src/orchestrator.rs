@@ -6,16 +6,15 @@ use crate::{
 };
 use image::RgbImage;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::path::Path;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TiledPanoramaOutput {
-    generated_tiles: GeneratedTiles,
-    pannellum_config: PannellumConfig,
-    actual_cube_size: u32,
+    pub generated_tiles: GeneratedTiles,
+    pub pannellum_config: PannellumConfig,
+    pub actual_cube_size: u32,
 }
 
 /// Process an RgbImage into Pannellum tiles and config.

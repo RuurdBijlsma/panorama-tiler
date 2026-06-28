@@ -1,5 +1,5 @@
-mod to_config;
 mod extractor;
+mod to_config;
 
-pub use to_config::*;
 pub use extractor::*;
+pub use to_config::*;

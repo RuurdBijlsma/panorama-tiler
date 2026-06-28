@@ -1,8 +1,5 @@
 use pano_tiler::exif::calc_cylindrical_pano_angles;
-use pano_tiler::{
-    process_panorama, save_to_disk, PanoAngles,
-    TilerConfig,
-};
+use pano_tiler::{PanoAngles, TilerConfig, process_panorama, save_to_disk};
 use std::path::Path;
 
 #[test]
@@ -20,7 +17,8 @@ fn test_generate_multires_panorama() {
     let focal_length_35mm_eq = 24.0;
     let crop_factor = 0.9; // Pano stitch crop factor
 
-    let angles = calc_cylindrical_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
+    let angles =
+        calc_cylindrical_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
     let config = TilerConfig {
         angles: PanoAngles {
             haov: angles.haov,

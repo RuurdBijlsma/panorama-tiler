@@ -29,7 +29,14 @@ pub fn generate_pannellum_config(
     let v_offset = vaov_opt.map(|_| config.angles.v_offset);
 
     let background_color = if config.output.background_color != [0, 0, 0] {
-        Some(config.output.background_color.to_vec())
+        Some(
+            config
+                .output
+                .background_color
+                .iter()
+                .map(|&c| c as f64 / 255.0)
+                .collect(),
+        )
     } else {
         None
     };

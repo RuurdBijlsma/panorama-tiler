@@ -23,18 +23,7 @@ fn get_xmp_metadata(file: &Path) -> Option<XmpMeta> {
         .cloned()
 }
 
-fn get_dimensions(file: &Path, exif: Option<&Exif>) -> Result<(u32, u32), TilerError> {
-    if let Some(exif) = exif {
-        let width = exif.get_field(exif::Tag::PixelXDimension, exif::In::PRIMARY)
-            .or_else(|| exif.get_field(exif::Tag::ImageWidth, exif::In::PRIMARY))
-            .and_then(|f| f.value.get_uint(0));
-        let height = exif.get_field(exif::Tag::PixelYDimension, exif::In::PRIMARY)
-            .or_else(|| exif.get_field(exif::Tag::ImageLength, exif::In::PRIMARY))
-            .and_then(|f| f.value.get_uint(0));
-        if let (Some(w), Some(h)) = (width, height) {
-            return Ok((w, h));
-        }
-    }
+fn get_dimensions(file: &Path) -> Result<(u32, u32), TilerError> {
     Ok(image::image_dimensions(file)?)
 }
 
@@ -85,7 +74,7 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
         }
 
         pose_heading
-    } else{
+    } else {
         None
     };
 
@@ -107,7 +96,7 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
         };
     }
 
-    let (width, height) = get_dimensions(file, exif_metadata.as_ref())?;
+    let (width, height) = get_dimensions(file)?;
     if let Some(focal) = focal_length_35mm
         && focal > 0.0
     {

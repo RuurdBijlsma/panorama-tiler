@@ -78,7 +78,7 @@ pub struct OutputConfig {
     pub interpolation_mode: InterpolationMode,
     pub yaw_padding: f64,
     pub pitch_padding: f64,
-    /// Background color used beyond boundaries (RGB, normalized 0.0 to 1.0).
+    /// Background color used beyond boundaries (RGB, 0-255).
     pub background_color: [u8; 3],
     /// Constrain viewport boundaries within image limits.
     pub avoid_showing_background: bool,
@@ -133,7 +133,7 @@ pub struct PannellumConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_pitch: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub background_color: Option<Vec<u8>>,
+    pub background_color: Option<Vec<f64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avoid_showing_background: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

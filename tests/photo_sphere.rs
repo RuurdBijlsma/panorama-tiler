@@ -51,10 +51,7 @@ fn generate_pano(image_path: &Path, output_format: OutputFormat, quality: u8) {
         "target/sphere_output_{}_q{}_{}",
         config.output.format.to_extension(),
         config.output.quality,
-        image_path
-            .file_name()
-            .unwrap()
-            .to_string_lossy(),
+        image_path.file_name().unwrap().to_string_lossy(),
     );
     let output_dir = Path::new(&out_path);
     if output_dir.exists() {

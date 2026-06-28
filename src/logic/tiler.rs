@@ -1,32 +1,29 @@
 use crate::config::TilerConfig;
-use crate::logic::{b83};
+use crate::logic::b83;
 use fast_image_resize as fr;
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
 use std::collections::BTreeSet;
-use serde::{Deserialize, Serialize};
 
 /// A representation of an individual generated tile.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TileItem {
     pub level: u32,
     pub face: char,
     pub col: u32,
     pub row: u32,
-    #[serde(skip)]
     pub image: RgbImage,
 }
 
 /// A representation of a fallback cube face tile.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FallbackItem {
     pub face: char,
-    #[serde(skip)]
     pub image: RgbImage,
 }
 
 /// Container holding the raw outputs of the multi-resolution pipeline.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedTiles {
     pub tiles: Vec<TileItem>,
     pub fallback_tiles: Vec<FallbackItem>,

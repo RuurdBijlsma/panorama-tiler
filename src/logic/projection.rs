@@ -7,7 +7,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 pub fn generate_cube_faces(
     src_image: &RgbImage,
     config: &TilerConfig,
-    actual_cube_size:u32,
+    actual_cube_size: u32,
 ) -> Vec<(char, RgbImage)> {
     let (src_width, src_height) = src_image.dimensions();
     let haov_rad = config.angles.haov.to_radians();

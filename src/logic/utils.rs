@@ -1,6 +1,6 @@
 use crate::{OutputFormat, TilerError};
-use image::codecs::jpeg::JpegEncoder;
 use image::RgbImage;
+use image::codecs::jpeg::JpegEncoder;
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
