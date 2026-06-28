@@ -1,5 +1,5 @@
 use crate::{
-    GeneratedTiles, OutputFormat, PannellumConfig, Projection, TilerConfig, TilerError, config,
+    GeneratedTiles, GeneratorConfig, OutputFormat, PannellumConfig, Projection, TilerError, config,
     projection, tiler,
 };
 use image::RgbImage;
@@ -13,7 +13,7 @@ use std::path::Path;
 /// High-level orchestration function to process an RgbImage into Pannellum tiles and config.
 pub fn process_panorama(
     src_image: &RgbImage,
-    config: &TilerConfig,
+    config: &GeneratorConfig,
 ) -> Result<(GeneratedTiles, PannellumConfig, u32), TilerError> {
     let (width, height) = src_image.dimensions();
 
@@ -64,32 +64,40 @@ pub fn process_panorama(
     let generated_tiles = tiler::generate_pyramid(&faces, &resolved_config, actual_cube_size);
 
     // 3. Build serialization configuration structure for Pannellum
-    let hfov = 100.0; // Standard default field of view
+    let hfov = 100.0;
     let haov_opt = if haov < 360.0 { Some(haov) } else { None };
-    let min_yaw = haov_opt.map(|h| -h / 2.0);
-    let max_yaw = haov_opt.map(|h| h / 2.0);
+    let min_yaw = haov_opt.map(|h| -h / 2.0 - config.yaw_padding);
+    let max_yaw = haov_opt.map(|h| h / 2.0 + config.yaw_padding);
     let yaw = haov_opt.map(|h| -h / 2.0 + hfov / 2.0);
 
     let vaov_opt = if vaov < 180.0 { Some(vaov) } else { None };
-    let min_pitch = vaov_opt.map(|v| -v / 2.0 + config.partial_config.v_offset);
-    let max_pitch = vaov_opt.map(|v| v / 2.0 + config.partial_config.v_offset);
+    let min_pitch =
+        vaov_opt.map(|v| -v / 2.0 + config.partial_config.v_offset - config.pitch_padding);
+    let max_pitch =
+        vaov_opt.map(|v| v / 2.0 + config.partial_config.v_offset + config.pitch_padding);
     let pitch = vaov_opt.map(|_| config.partial_config.v_offset);
     let v_offset = vaov_opt.map(|_| config.partial_config.v_offset);
 
-    let background_color = if config.partial_config.background_color != [0.0, 0.0, 0.0] {
-        Some(config.partial_config.background_color.to_vec())
+    let background_color = if config.background_color != [0.0, 0.0, 0.0] {
+        Some(config.background_color.to_vec())
     } else {
         None
     };
 
     let avoid_showing_background =
-        if config.partial_config.avoid_showing_background && (haov < 360.0 || vaov < 180.0) {
+        if config.avoid_showing_background && (haov < 360.0 || vaov < 180.0) {
             Some(true)
         } else {
             None
         };
 
     let auto_load = if config.auto_load { Some(true) } else { None };
+
+    let north_offset = if config.partial_config.north_offset != 0.0 {
+        Some(config.partial_config.north_offset)
+    } else {
+        None
+    };
 
     let multires = config::MultiResConfig {
         sht_hash: None,
@@ -121,6 +129,7 @@ pub fn process_panorama(
         background_color,
         avoid_showing_background,
         auto_load,
+        north_offset,
         pano_type: "multires".to_string(),
         multi_res: multires,
     };

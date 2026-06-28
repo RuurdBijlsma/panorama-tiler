@@ -1,37 +1,28 @@
-use pano_tiler::{
-    process_panorama, save_to_disk, OutputFormat, GeneratorConfig,
-};
+use pano_tiler::exif_helper::{exif_to_partial_pano_config, PanoExif};
+use pano_tiler::{PartialPanoConfig, GeneratorConfig, process_panorama, save_to_disk};
 use std::path::Path;
 
 #[test]
 fn test_generate_multires_panorama() {
-    let out_formats = &[
-        OutputFormat::Jpeg,
-        OutputFormat::Png,
-        #[cfg(feature = "webp")]
-        OutputFormat::Webp,
-    ];
-    // webp 85 seems a good balance
-    let qualities = &[75, 85, 95];
-    for out_format in out_formats {
-        for quality in qualities {
-            generate_pano(*out_format, *quality);
-        }
-    }
-}
-
-fn generate_pano(output_format: OutputFormat, quality: u8) {
-    let img_path = Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg");
+    let img_path = Path::new("img/PXL_20210730_144252204.PHOTOSPHERE.jpg");
     assert!(img_path.exists());
 
-    // Load the photosphere
+    // Load the pano
     let dynamic_img = image::open(img_path).expect("Failed to open source integration test image");
     let rgb_img = dynamic_img.to_rgb8();
 
-    // Define custom options (Defaults here model a full 360 panorama)
+    // From exif:
+    let partial_config = exif_to_partial_pano_config(&PanoExif {
+        cropped_area_image_height_pixels: 4530,
+        cropped_area_image_width_pixels: 5890,
+        full_pano_height_pixels: 7731,
+        full_pano_width_pixels: 15462,
+        cropped_area_top_pixels: 282,
+        pose_heading_degrees: Some(135.0),
+    });
     let config = GeneratorConfig {
-        output_format,
-        quality,
+        partial_config,
+        avoid_showing_background: false,
         ..Default::default()
     };
 
@@ -44,12 +35,7 @@ fn generate_pano(output_format: OutputFormat, quality: u8) {
     println!("Total tiles generated: {}", tiles.tiles.len());
 
     // Save to disk
-    let out_path = format!(
-        "target/sphere_output_{}_q{}",
-        config.output_format.to_extension(),
-        config.quality
-    );
-    let output_dir = Path::new(&out_path);
+    let output_dir = Path::new("target/partial_sphere");
     if output_dir.exists() {
         std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
     }

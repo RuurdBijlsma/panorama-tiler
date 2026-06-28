@@ -1,4 +1,4 @@
-use crate::config::{Projection, TilerConfig, InterpolationMode};
+use crate::config::{Projection, GeneratorConfig, InterpolationMode};
 use crate::utils::get_bg_color;
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
@@ -7,13 +7,13 @@ use std::f64::consts::{FRAC_PI_2, PI};
 /// Generates the 6 cubemap face images from an equirectangular or cylindrical input image.
 pub fn generate_cube_faces(
     src_image: &RgbImage,
-    config: &TilerConfig,
+    config: &GeneratorConfig,
     actual_cube_size: u32,
 ) -> Vec<(char, RgbImage)> {
     let (src_width, src_height) = src_image.dimensions();
     let haov_rad = config.partial_config.haov.to_radians();
     let vaov_rad = config.partial_config.vaov.to_radians();
-    let horizon_pixels = config.partial_config.horizon_pixels;
+    let v_offset_rad = config.partial_config.v_offset.to_radians();
     let interp_mode = config.interpolation_mode;
 
     // Convert normalized [0.0, 1.0] colors to Rgb<u8>
@@ -34,18 +34,14 @@ pub fn generate_cube_faces(
         .map(|(letter, yaw, pitch)| {
             let mut face_img = RgbImage::new(actual_cube_size, actual_cube_size);
 
-            // Precompute trigonometric values for the face
             let cos_p = pitch.cos();
             let sin_p = pitch.sin();
             let cos_y = yaw.cos();
             let sin_y = yaw.sin();
 
             let stride = actual_cube_size as usize * 3;
-
-            // Stable conversion from RgbImage to &mut [u8] via DerefMut
             let face_pixels: &mut [u8] = &mut face_img;
 
-            // Process every row of this face in parallel
             face_pixels
                 .par_chunks_exact_mut(stride)
                 .enumerate()
@@ -95,39 +91,40 @@ pub fn generate_cube_faces(
                             }
                         };
 
-                        // Vertical projection mapping
+                        // Vertical projection mapping using angular offsets
                         let src_y = if !is_outside {
                             match config.projection {
                                 Projection::Cylindrical => {
                                     let half_vaov = vaov_rad / 2.0;
                                     let max_y_cyl = half_vaov.tan();
-                                    let y_cyl = phi.tan();
+
+                                    let phi_relative = phi - v_offset_rad;
+                                    let y_cyl = phi_relative.tan();
 
                                     if y_cyl.abs() > max_y_cyl {
                                         is_outside = true;
                                         0.0
                                     } else {
                                         let normalized_y = y_cyl / max_y_cyl;
-                                        let y_base = (1.0 - normalized_y) / 2.0 * (src_height as f64);
-                                        y_base + (horizon_pixels as f64)
+                                        (1.0 - normalized_y) / 2.0 * (src_height as f64)
                                     }
                                 }
                                 Projection::Equirectangular => {
                                     if config.partial_config.vaov >= 180.0 {
                                         let normalized_phi = (FRAC_PI_2 - phi) / PI;
-                                        let y_base = normalized_phi * (src_height as f64);
-                                        y_base + (horizon_pixels as f64)
+                                        normalized_phi * (src_height as f64)
                                     } else {
                                         let half_vaov = vaov_rad / 2.0;
 
-                                        if phi.abs() > half_vaov {
+                                        // Offset the incoming ray pitch by the vertical center pitch of the crop
+                                        let phi_relative = phi - v_offset_rad;
+
+                                        if phi_relative.abs() > half_vaov {
                                             is_outside = true;
                                             0.0
                                         } else {
-                                            let normalized_phi = (phi / half_vaov + 1.0) / 2.0;
-                                            let y_base =
-                                                (1.0 - normalized_phi) / 2.0 * (src_height as f64);
-                                            y_base + (horizon_pixels as f64)
+                                            let normalized_phi = (phi_relative / half_vaov + 1.0) / 2.0;
+                                            (1.0 - normalized_phi) * (src_height as f64)
                                         }
                                     }
                                 }

@@ -49,10 +49,8 @@ pub struct PartialPanoConfig {
     pub v_offset: f64,
     /// Offset of the horizon in pixels (can be negative).
     pub horizon_pixels: i32,
-    /// Background color used beyond boundaries (RGB, normalized 0.0 to 1.0).
-    pub background_color: [f64; 3],
-    /// Constrain viewport boundaries within image limits.
-    pub avoid_showing_background: bool,
+    /// Compass heading offset of the center (degrees).
+    pub north_offset: f64,
 }
 
 impl Default for PartialPanoConfig {
@@ -62,15 +60,14 @@ impl Default for PartialPanoConfig {
             vaov: 180.0,
             v_offset: 0.0,
             horizon_pixels: 0,
-            background_color: [0.0, 0.0, 0.0],
-            avoid_showing_background: false,
+            north_offset: 0.0,
         }
     }
 }
 
 /// Global tiler options.
 #[derive(Debug, Clone)]
-pub struct TilerConfig {
+pub struct GeneratorConfig {
     pub projection: Projection,
     pub partial_config: PartialPanoConfig,
     pub tile_size: u32,
@@ -80,9 +77,15 @@ pub struct TilerConfig {
     pub output_format: OutputFormat,
     pub quality: u8,
     pub interpolation_mode: InterpolationMode,
+    pub yaw_padding: f64,
+    pub pitch_padding: f64,
+    /// Background color used beyond boundaries (RGB, normalized 0.0 to 1.0).
+    pub background_color: [f64; 3],
+    /// Constrain viewport boundaries within image limits.
+    pub avoid_showing_background: bool,
 }
 
-impl Default for TilerConfig {
+impl Default for GeneratorConfig {
     fn default() -> Self {
         Self {
             projection: Projection::Equirectangular,
@@ -94,6 +97,10 @@ impl Default for TilerConfig {
             output_format: OutputFormat::default(),
             quality: 75,
             interpolation_mode: InterpolationMode::default(),
+            background_color: [0.0, 0.0, 0.0],
+            avoid_showing_background: false,
+            yaw_padding: 0.0,
+            pitch_padding: 0.0,
         }
     }
 }
@@ -127,6 +134,8 @@ pub struct PannellumConfig {
     pub avoid_showing_background: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_load: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub north_offset: Option<f64>,
     #[serde(rename = "type")]
     pub pano_type: String, // Always "multires"
     pub multi_res: MultiResConfig,

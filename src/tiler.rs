@@ -1,4 +1,4 @@
-use crate::config::TilerConfig;
+use crate::config::GeneratorConfig;
 use crate::utils::get_bg_color;
 use image::RgbImage;
 use rayon::prelude::*;
@@ -61,7 +61,7 @@ fn is_region_empty(
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
-    config: &TilerConfig,
+    config: &GeneratorConfig,
     actual_cube_size: u32,
 ) -> GeneratedTiles {
     let tile_size = config.tile_size.min(actual_cube_size);

@@ -6,5 +6,6 @@
 * ✅ defaults for config
 * ✅ improve performance
 * ✅ fast_image_resize
-* write readme
 * test with partial spherical pano? (photosphere)
+* exif helpers?
+* write readme

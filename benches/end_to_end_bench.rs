@@ -1,7 +1,7 @@
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use pano_tiler::{
-    process_panorama, save_to_disk, InterpolationMode, OutputFormat, PartialPanoConfig,
-    Projection, TilerConfig,
+    process_panorama, save_to_disk, GeneratorConfig,
+    PartialPanoConfig, Projection,
 };
 use std::fs;
 use std::path::Path;
@@ -20,16 +20,13 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
     let output_dir = Path::new("target/bench_end_to_end_out");
 
     // Default configuration matching the Python script's defaults
-    let config = TilerConfig {
+    let config = GeneratorConfig {
         projection: Projection::Equirectangular,
         partial_config: PartialPanoConfig::default(),
         tile_size: 512,
         fallback_size: 1024,
-        cube_size: 0, // Automatically calculated
-        auto_load: true,
-        output_format: OutputFormat::Jpeg,
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        cube_size: 0,
+        ..Default::default()
     };
 
     group.bench_function("rust_native_pipeline", |b| {

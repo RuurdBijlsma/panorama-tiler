@@ -1,6 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
-use pano_tiler::{PartialPanoConfig, Projection, TilerConfig, b83, calculate_pano_angles, projection, tiler, InterpolationMode};
+use pano_tiler::{PartialPanoConfig, Projection, GeneratorConfig, b83, calculate_pano_angles, projection, tiler, InterpolationMode};
 use std::hint::black_box;
 use std::time::Duration;
 
@@ -44,16 +44,14 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     let src_image = generate_synthetic_pano(1024, 512);
 
     // Full Equirectangular
-    let config_full = TilerConfig {
+    let config_full = GeneratorConfig {
         projection: Projection::Equirectangular,
         partial_config: PartialPanoConfig::default(),
+        output_format: Default::default(),
         tile_size: 256,
         fallback_size: 0,
         cube_size: 256,
-        auto_load: false,
-        output_format: Default::default(),
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
     group.bench_function("generate_cube_faces_equirect_full", |b| {
         b.iter(|| {
@@ -66,7 +64,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     });
 
     // 2. Partial Cylindrical
-    let config_partial_cyl = TilerConfig {
+    let config_partial_cyl = GeneratorConfig {
         projection: Projection::Cylindrical,
         partial_config: PartialPanoConfig {
             haov: 180.0,
@@ -77,9 +75,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
         fallback_size: 0,
         cube_size: 256,
         auto_load: false,
-        output_format: Default::default(),
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
     group.bench_function("generate_cube_faces_cylindrical_partial", |b| {
         b.iter(|| {
@@ -100,16 +96,13 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
     let src_image = generate_synthetic_pano(512, 256);
 
     // Full configuration
-    let config_full = TilerConfig {
+    let config_full = GeneratorConfig {
         projection: Projection::Equirectangular,
         partial_config: PartialPanoConfig::default(),
         tile_size: 256,
         fallback_size: 512,
         cube_size: 256,
-        auto_load: false,
-        output_format: Default::default(),
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
     let faces_full = projection::generate_cube_faces(&src_image, &config_full, 256);
 
@@ -124,21 +117,17 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
     });
 
     // Partial configuration (forces background-check iteration and missing-tiles formatting)
-    let config_partial = TilerConfig {
+    let config_partial = GeneratorConfig {
         projection: Projection::Equirectangular,
         partial_config: PartialPanoConfig {
             haov: 120.0,
             vaov: 60.0,
-            background_color: [0.0, 0.0, 0.0],
             ..Default::default()
         },
         tile_size: 256,
         fallback_size: 512,
         cube_size: 256,
-        auto_load: false,
-        output_format: Default::default(),
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
     let faces_partial = projection::generate_cube_faces(&src_image, &config_partial, 256);
 
@@ -162,16 +151,13 @@ fn bench_full_integration(c: &mut Criterion) {
     group.warm_up_time(Duration::from_secs(5));
 
     let src_image = generate_synthetic_pano(4000, 2000);
-    let config = TilerConfig {
+    let config = GeneratorConfig {
         projection: Projection::Equirectangular,
         partial_config: PartialPanoConfig::default(),
         tile_size: 512,
         fallback_size: 1024,
         cube_size: 0,
-        auto_load: true,
-        output_format: Default::default(),
-        quality: 75,
-        interpolation_mode: InterpolationMode::Bicubic,
+        ..Default::default()
     };
 
     group.bench_function("process_panorama_4k", |b| {

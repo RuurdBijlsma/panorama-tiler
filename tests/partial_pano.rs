@@ -1,4 +1,4 @@
-use pano_tiler::{OutputFormat, PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles, process_panorama, save_to_disk, InterpolationMode};
+use pano_tiler::{calculate_pano_angles, process_panorama, save_to_disk, PartialPanoConfig, Projection, GeneratorConfig};
 use std::path::Path;
 
 #[test]
@@ -17,14 +17,14 @@ fn test_generate_multires_panorama() {
     let crop_factor = 0.9; // Pano stitch crop factor
 
     let angles = calculate_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
-    let config = TilerConfig {
+    let config = GeneratorConfig {
         projection: Projection::Cylindrical,
         partial_config: PartialPanoConfig {
             haov: angles.haov,
             vaov: angles.vaov,
-            avoid_showing_background: true,
             ..Default::default()
         },
+        avoid_showing_background: true,
         ..Default::default()
     };
 
