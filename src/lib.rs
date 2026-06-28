@@ -8,7 +8,7 @@ mod error;
 mod orchestrator;
 mod utils;
 
-pub use config::{OutputFormat, PannellumConfig, PartialPanoConfig, Projection, TilerConfig};
+pub use config::{OutputFormat, InterpolationMode, PannellumConfig, PartialPanoConfig, Projection, TilerConfig};
 pub use config_helper::*;
 pub use error::TilerError;
 pub use orchestrator::*;

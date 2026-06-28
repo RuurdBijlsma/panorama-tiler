@@ -29,6 +29,15 @@ impl OutputFormat {
     }
 }
 
+/// Interpolation mode for pixel sampling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InterpolationMode {
+    Bilinear,
+    #[default]
+    Bicubic,
+}
+
 /// Parameters for partial panorama mapping configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialPanoConfig {
@@ -70,6 +79,7 @@ pub struct TilerConfig {
     pub auto_load: bool,
     pub output_format: OutputFormat,
     pub quality: u8,
+    pub interpolation_mode: InterpolationMode,
 }
 
 impl Default for TilerConfig {
@@ -83,6 +93,7 @@ impl Default for TilerConfig {
             auto_load: false,
             output_format: OutputFormat::default(),
             quality: 75,
+            interpolation_mode: InterpolationMode::default(),
         }
     }
 }

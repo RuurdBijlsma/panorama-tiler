@@ -1,8 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
-use pano_tiler::{
-    PartialPanoConfig, Projection, TilerConfig, b83, calculate_pano_angles, projection, tiler,
-};
+use pano_tiler::{PartialPanoConfig, Projection, TilerConfig, b83, calculate_pano_angles, projection, tiler, InterpolationMode};
 use std::hint::black_box;
 use std::time::Duration;
 
@@ -55,6 +53,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
         auto_load: false,
         output_format: Default::default(),
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
     group.bench_function("generate_cube_faces_equirect_full", |b| {
         b.iter(|| {
@@ -80,6 +79,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
         auto_load: false,
         output_format: Default::default(),
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
     group.bench_function("generate_cube_faces_cylindrical_partial", |b| {
         b.iter(|| {
@@ -109,6 +109,7 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
         auto_load: false,
         output_format: Default::default(),
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
     let faces_full = projection::generate_cube_faces(&src_image, &config_full, 256);
 
@@ -137,6 +138,7 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
         auto_load: false,
         output_format: Default::default(),
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
     let faces_partial = projection::generate_cube_faces(&src_image, &config_partial, 256);
 
@@ -169,6 +171,7 @@ fn bench_full_integration(c: &mut Criterion) {
         auto_load: true,
         output_format: Default::default(),
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
 
     group.bench_function("process_panorama_4k", |b| {

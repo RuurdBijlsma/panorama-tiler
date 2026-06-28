@@ -1,4 +1,4 @@
-use crate::config::{Projection, TilerConfig};
+use crate::config::{Projection, TilerConfig, InterpolationMode};
 use crate::utils::get_bg_color;
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
@@ -14,6 +14,7 @@ pub fn generate_cube_faces(
     let haov_rad = config.partial_config.haov.to_radians();
     let vaov_rad = config.partial_config.vaov.to_radians();
     let horizon_pixels = config.partial_config.horizon_pixels;
+    let interp_mode = config.interpolation_mode;
 
     // Convert normalized [0.0, 1.0] colors to Rgb<u8>
     let bg_color = get_bg_color(config);
@@ -57,12 +58,12 @@ pub fn generate_cube_faces(
                         let y_local = -v; // Invert because image rows increase downwards
                         let z_local = 1.0;
 
-                        // 1. Pitch rotation (around X-axis)
+                        // 1. Pitch rotation (around X-axis) using precomputed trig
                         let x1 = x_local;
                         let y1 = y_local * cos_p - z_local * sin_p;
                         let z1 = y_local * sin_p + z_local * cos_p;
 
-                        // 2. Yaw rotation (around Y-axis)
+                        // 2. Yaw rotation (around Y-axis) using precomputed trig
                         let x2 = x1 * cos_y + z1 * sin_y;
                         let y2 = y1;
                         let z2 = -x1 * sin_y + z1 * cos_y;
@@ -107,8 +108,7 @@ pub fn generate_cube_faces(
                                         0.0
                                     } else {
                                         let normalized_y = y_cyl / max_y_cyl;
-                                        let y_base =
-                                            (1.0 - normalized_y) / 2.0 * (src_height as f64);
+                                        let y_base = (1.0 - normalized_y) / 2.0 * (src_height as f64);
                                         y_base + (horizon_pixels as f64)
                                     }
                                 }
@@ -139,13 +139,22 @@ pub fn generate_cube_faces(
                         let pixel = if is_outside {
                             bg_color
                         } else {
-                            sample_bicubic(
-                                src_image,
-                                src_x,
-                                src_y,
-                                config.partial_config.haov >= 360.0,
-                                bg_color,
-                            )
+                            match interp_mode {
+                                InterpolationMode::Bicubic => sample_bicubic(
+                                    src_image,
+                                    src_x,
+                                    src_y,
+                                    config.partial_config.haov >= 360.0,
+                                    bg_color,
+                                ),
+                                InterpolationMode::Bilinear => sample_bilinear(
+                                    src_image,
+                                    src_x,
+                                    src_y,
+                                    config.partial_config.haov >= 360.0,
+                                    bg_color,
+                                ),
+                            }
                         };
 
                         let offset = col as usize * 3;
@@ -158,6 +167,63 @@ pub fn generate_cube_faces(
             (letter, face_img)
         })
         .collect()
+}
+
+fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
+    let (w, h) = img.dimensions();
+    let w_f = w as f64;
+    let h_f = h as f64;
+
+    if y < 0.0 || y >= h_f || (!wrap_x && (x < 0.0 || x >= w_f)) {
+        return bg;
+    }
+
+    let x_wrapped = if wrap_x { x.rem_euclid(w_f) } else { x };
+
+    // Shift coordinates by -0.5 to align continuous mapping with pixel centers
+    let x_center = x_wrapped - 0.5;
+    let y_center = y - 0.5;
+
+    let x0 = x_center.floor();
+    let y0 = y_center.floor();
+
+    let dx = x_center - x0;
+    let dy = y_center - y0;
+
+    let x0_i = x0 as i32;
+    let y0_i = y0 as i32;
+
+    let get_pixel_helper = |px: i32, py: i32| -> &Rgb<u8> {
+        let py_clamped = py.clamp(0, h as i32 - 1) as u32;
+        if wrap_x {
+            let px_wrapped = px.rem_euclid(w as i32) as u32;
+            img.get_pixel(px_wrapped, py_clamped)
+        } else if px < 0 || px >= w as i32 {
+            &bg
+        } else {
+            img.get_pixel(px as u32, py_clamped)
+        }
+    };
+
+    let p00 = get_pixel_helper(x0_i, y0_i);
+    let p10 = get_pixel_helper(x0_i + 1, y0_i);
+    let p01 = get_pixel_helper(x0_i, y0_i + 1);
+    let p11 = get_pixel_helper(x0_i + 1, y0_i + 1);
+
+    let w00 = (1.0 - dx) * (1.0 - dy);
+    let w10 = dx * (1.0 - dy);
+    let w01 = (1.0 - dx) * dy;
+    let w11 = dx * dy;
+
+    let r = p00[0] as f64 * w00 + p10[0] as f64 * w10 + p01[0] as f64 * w01 + p11[0] as f64 * w11;
+    let g = p00[1] as f64 * w00 + p10[1] as f64 * w10 + p01[1] as f64 * w01 + p11[1] as f64 * w11;
+    let b = p00[2] as f64 * w00 + p10[2] as f64 * w10 + p01[2] as f64 * w01 + p11[2] as f64 * w11;
+
+    Rgb([
+        r.round().clamp(0.0, 255.0) as u8,
+        g.round().clamp(0.0, 255.0) as u8,
+        b.round().clamp(0.0, 255.0) as u8,
+    ])
 }
 
 /// Helper function to perform bicubic sampling.

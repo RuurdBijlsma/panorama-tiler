@@ -1,7 +1,4 @@
-use pano_tiler::{
-    OutputFormat, PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles,
-    process_panorama, save_to_disk,
-};
+use pano_tiler::{OutputFormat, PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles, process_panorama, save_to_disk, InterpolationMode};
 use std::path::Path;
 
 #[test]
@@ -36,6 +33,7 @@ fn test_generate_multires_panorama() {
         auto_load: true,
         output_format: OutputFormat::Jpeg,
         quality: 75,
+        interpolation_mode: InterpolationMode::Bicubic,
     };
 
     // Process the panorama
