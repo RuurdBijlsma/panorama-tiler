@@ -24,7 +24,6 @@ pub fn process_panorama(
 ) -> Result<TiledPanoramaOutput, TilerError> {
     let (width, _) = src_image.dimensions();
 
-    // Section 2.A: Validate inputs against NaN / Infinite floats
     if !config.angles.haov.is_finite()
         || !config.angles.vaov.is_finite()
         || config.angles.haov <= 0.0
@@ -73,14 +72,10 @@ pub fn save_to_disk(
 
     let ext = output_format.to_extension();
 
-    // Section 3.A: Precompute and pre-allocate level directory paths once
-    let level_dirs: Vec<std::path::PathBuf> = (0..=pano.generated_tiles.levels)
-        .map(|level| output_dir.join(level.to_string()))
-        .collect();
-
     // Create zoom level folders
     for level in 1..=pano.generated_tiles.levels {
-        fs::create_dir_all(&level_dirs[level as usize])?;
+        let level_dir = output_dir.join(level.to_string());
+        fs::create_dir_all(&level_dir)?;
     }
 
     pano.generated_tiles
@@ -88,7 +83,7 @@ pub fn save_to_disk(
         .par_iter()
         .try_for_each(|tile| -> Result<(), TilerError> {
             let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
-            let filepath = level_dirs[tile.level as usize].join(filename);
+            let filepath = output_dir.join(tile.level.to_string()).join(filename);
             save_image(&tile.image, &filepath, output_format, quality)?;
             Ok(())
         })?;
@@ -124,8 +119,7 @@ pub fn tile_panorama_with_guessed_angles(
     output_dir: &Path,
     output_config: Option<OutputConfig>,
 ) -> Result<(), TilerError> {
-    // Section 3.B: Read file once and process directly from memory to minimize redundant disk calls
-    let bytes = std::fs::read(input_file)?;
+    let bytes = fs::read(input_file)?;
     let config = TilerConfig {
         angles: guess_pano_angles_from_bytes(&bytes)?,
         output: output_config.unwrap_or_default(),
@@ -151,8 +145,7 @@ pub fn tile_panorama(
     output_dir: &Path,
     config: &TilerConfig,
 ) -> Result<(), TilerError> {
-    // Section 3.B: Read file once and process directly from memory to minimize redundant disk calls
-    let bytes = std::fs::read(input_file)?;
+    let bytes = fs::read(input_file)?;
     let dynamic_img = image::load_from_memory(&bytes)?;
     let rgb_img = dynamic_img.to_rgb8();
     let pano_output = process_panorama(&rgb_img, config)?;

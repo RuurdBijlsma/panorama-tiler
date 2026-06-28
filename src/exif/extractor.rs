@@ -5,13 +5,13 @@ use std::io::Cursor;
 use std::path::Path;
 use xmpkit::XmpMeta;
 
-fn get_exif_metadata_from_bytes(bytes: &[u8]) -> Option<Exif> {
+fn get_exif_metadata(bytes: &[u8]) -> Option<Exif> {
     let mut cursor = Cursor::new(bytes);
     let exif_reader = exif::Reader::new();
     exif_reader.read_from_container(&mut cursor).ok()
 }
 
-fn get_xmp_metadata_from_bytes(bytes: &[u8]) -> Option<XmpMeta> {
+fn get_xmp_metadata(bytes: &[u8]) -> Option<XmpMeta> {
     let mut xmp_file = xmpkit::XmpFile::new();
     xmp_file
         .from_bytes(bytes)
@@ -20,12 +20,12 @@ fn get_xmp_metadata_from_bytes(bytes: &[u8]) -> Option<XmpMeta> {
         .cloned()
 }
 
-fn get_dimensions_from_bytes(bytes: &[u8]) -> Result<(u32, u32), TilerError> {
+fn get_dimensions(bytes: &[u8]) -> Result<(u32, u32), TilerError> {
     let reader = image::ImageReader::new(Cursor::new(bytes)).with_guessed_format()?;
     Ok(reader.into_dimensions()?)
 }
 
-/// Guesses the panorama angles from a file, reading it into a single buffer once to optimize disk I/O.
+/// Guesses the panorama angles from a file
 pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
     let bytes = std::fs::read(file)?;
     guess_pano_angles_from_bytes(&bytes)
@@ -34,7 +34,7 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
 /// Guesses the panorama angles from raw image file bytes.
 pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerError> {
     // Extract metadata
-    let xmp_metadata = get_xmp_metadata_from_bytes(bytes);
+    let xmp_metadata = get_xmp_metadata(bytes);
 
     // Query Google Photo Sphere (GPano) values
     let north_offset = if let Some(meta) = &xmp_metadata {
@@ -89,7 +89,7 @@ pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerErr
     let mut projection = Projection::Equirectangular;
 
     // Cylindrical Sweep detection via focal length EXIF tags
-    let exif_metadata = get_exif_metadata_from_bytes(bytes);
+    let exif_metadata = get_exif_metadata(bytes);
     let mut focal_length_35mm = None;
 
     if let Some(exif) = &exif_metadata
@@ -101,7 +101,7 @@ pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerErr
         };
     }
 
-    let (width, height) = get_dimensions_from_bytes(bytes)?;
+    let (width, height) = get_dimensions(bytes)?;
     if let Some(focal) = focal_length_35mm
         && focal > 0.0
     {

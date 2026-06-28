@@ -19,31 +19,24 @@ pub fn generate_cube_faces(
     let bg_color = Rgb(config.output.background_color);
 
     // Hugin standard camera orientation mapping
-    let face_setups = vec![
-        ('f', 0.0, 0.0),        // front
-        ('b', PI, 0.0),         // back
-        ('u', 0.0, -FRAC_PI_2), // up
-        ('d', 0.0, FRAC_PI_2),  // down
-        ('l', -FRAC_PI_2, 0.0), // left
-        ('r', FRAC_PI_2, 0.0),  // right
-    ];
+    let face_setups = ['f', 'b', 'u', 'd', 'l', 'r'];
 
     face_setups
         .into_par_iter()
-        .map(|(letter, _yaw, _pitch)| {
+        .map(|letter| {
             let mut face_img = RgbImage::new(actual_cube_size, actual_cube_size);
 
             let stride = actual_cube_size as usize * 3;
             let face_pixels: &mut [u8] = &mut face_img;
 
-            // Direct mapping based on cardinal orientations (no general trig matrices needed)
+            // Direct mapping based on cardinal orientations
             let map_coords: fn(f64, f64) -> (f64, f64, f64) = match letter {
-                'f' => |u, v| (u, -v, 1.0),
-                'b' => |u, v| (-u, -v, -1.0),
-                'u' => |u, v| (u, 1.0, v),
-                'd' => |u, v| (u, -1.0, -v),
-                'l' => |u, v| (-1.0, -v, u),
-                'r' => |u, v| (1.0, -v, -u),
+                'f' => |u, v| (u, -v, 1.0),   // front
+                'b' => |u, v| (-u, -v, -1.0), // back
+                'u' => |u, v| (u, 1.0, v),    // up
+                'd' => |u, v| (u, -1.0, -v),  // down
+                'l' => |u, v| (-1.0, -v, u),  // left
+                'r' => |u, v| (1.0, -v, -u),  // right
                 _ => unreachable!(),
             };
 
@@ -51,7 +44,6 @@ pub fn generate_cube_faces(
                 .par_chunks_exact_mut(stride)
                 .enumerate()
                 .for_each(|(row, row_pixels)| {
-                    // Pull loop-invariant vertical coordinate calculation outside the column loop
                     let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
                     for col in 0..actual_cube_size {
                         let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
@@ -62,7 +54,6 @@ pub fn generate_cube_faces(
                         let length = (x2 * x2 + y2 * y2 + z2 * z2).sqrt();
 
                         // Map the 3D vector back to spherical coordinates (yaw/pitch angles)
-                        // Note: theta can be calculated from (x2, z2) without division by length.
                         let theta = x2.atan2(z2);
                         let phi = (y2 / length).clamp(-1.0, 1.0).asin();
 
@@ -183,7 +174,6 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
     let x0_i = x0 as i32;
     let y0_i = y0 as i32;
 
-    // Precalculate clamped Y-coordinates
     let py0 = y0_i.clamp(0, h as i32 - 1) as u32;
     let py1 = (y0_i + 1).clamp(0, h as i32 - 1) as u32;
 
@@ -262,7 +252,7 @@ fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> 
     let wx = get_weights(dx);
     let wy = get_weights(dy);
 
-    // Precalculate wrapped X-coordinates to avoid doing rem_euclid and boundary checks in loops
+    // Precalculate wrapped X-coordinates
     let mut px_mapped = [None; 4];
     for i in -1..=2 {
         let px = x0_i + i;
