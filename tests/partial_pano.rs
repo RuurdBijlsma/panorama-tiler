@@ -3,7 +3,7 @@ use std::path::Path;
 
 #[test]
 fn test_generate_multires_panorama() {
-    let img_path = Path::new("img/PXL_20260414_113245071.PANO.jpg");
+    let img_path = Path::new("img/cylinder/PXL_20260414_113245071.PANO.jpg");
     assert!(img_path.exists());
 
     // Load the pano

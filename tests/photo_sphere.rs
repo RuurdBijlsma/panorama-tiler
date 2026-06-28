@@ -4,8 +4,8 @@ use std::path::Path;
 #[test]
 fn test_generate_multires_panorama() {
     let input_images = &[
-        Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg"),
-        Path::new("img/PXL_20210722_151141413.PHOTOSPHERE.jpg"),
+        Path::new("img/sphere/PXL_20220918_115954889.PHOTOSPHERE.jpg"),
+        Path::new("img/sphere/PXL_20210722_151141413.PHOTOSPHERE.jpg"),
     ];
     let out_formats = &[
         OutputFormat::Jpeg,

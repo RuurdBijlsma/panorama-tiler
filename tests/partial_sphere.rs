@@ -3,7 +3,7 @@ use pano_tiler::{GeneratorConfig, process_panorama, save_to_disk};
 use std::path::{Path, PathBuf};
 
 fn image1_config() -> (PathBuf, GeneratorConfig) {
-    let img = Path::new("img/PXL_20210730_144252204.PHOTOSPHERE.jpg").to_path_buf();
+    let img = Path::new("img/partial_sphere/PXL_20210730_144252204.PHOTOSPHERE.jpg").to_path_buf();
     // From exif:
     let pose_heading_degrees = 135.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
@@ -22,7 +22,7 @@ fn image1_config() -> (PathBuf, GeneratorConfig) {
 }
 
 fn image2_config() -> (PathBuf, GeneratorConfig) {
-    let img = Path::new("img/PXL_20210730_183041272.PANO.jpg").to_path_buf();
+    let img = Path::new("img/partial_sphere/PXL_20210730_183041272.PANO.jpg").to_path_buf();
     // From exif:
     let pose_heading_degrees = 87.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
@@ -43,7 +43,7 @@ fn image2_config() -> (PathBuf, GeneratorConfig) {
 }
 
 fn image3_config() -> (PathBuf, GeneratorConfig) {
-    let img = Path::new("img/PANO_20210207_152515.jpg").to_path_buf();
+    let img = Path::new("img/partial_sphere/PANO_20210207_152515.jpg").to_path_buf();
     // From exif:
     let pose_heading_degrees = 215.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
@@ -62,7 +62,7 @@ fn image3_config() -> (PathBuf, GeneratorConfig) {
 }
 
 fn image4_config() -> (PathBuf, GeneratorConfig) {
-    let img = Path::new("img/PANO_20200806_210426.jpg").to_path_buf();
+    let img = Path::new("img/partial_sphere/PANO_20200806_210426.jpg").to_path_buf();
     // From exif:
     let pose_heading_degrees = 123.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
@@ -80,6 +80,25 @@ fn image4_config() -> (PathBuf, GeneratorConfig) {
     (img, config)
 }
 
+fn image5_config() -> (PathBuf, GeneratorConfig) {
+    let img = Path::new("img/partial_sphere/PANO_20130622_091214.jpg").to_path_buf();
+    // From exif:
+    let pose_heading_degrees = 123.0;
+    let partial_config = exif_to_partial_pano_config(&PanoExif {
+        cropped_area_image_height_pixels: 807,
+        cropped_area_image_width_pixels: 7896,
+        full_pano_height_pixels: 3948,
+        full_pano_width_pixels: 7896,
+        cropped_area_top_pixels: 1604,
+    });
+    let config = GeneratorConfig {
+        partial_config,
+        north_offset: Some(pose_heading_degrees),
+        ..Default::default()
+    };
+    (img, config)
+}
+
 #[test]
 fn test_generate_multires_panorama() {
     let img_configs = &[
@@ -87,6 +106,7 @@ fn test_generate_multires_panorama() {
         image2_config(),
         image3_config(),
         image4_config(),
+        image5_config(),
     ];
     for (img, config) in img_configs {
         generate(img, config);
