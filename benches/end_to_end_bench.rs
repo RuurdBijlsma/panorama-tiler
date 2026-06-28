@@ -49,7 +49,7 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
                 config.output.format,
                 config.output.quality,
             )
-                .expect("Failed to save tiles to disk");
+            .expect("Failed to save tiles to disk");
         })
     });
 
