@@ -9,11 +9,11 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
 
     // Disk I/O benchmarks have high latency and variance.
     // We use a small sample size to prevent the benchmark from taking too long.
-    group.sample_size(20);
-    group.measurement_time(Duration::from_secs(220));
+    group.sample_size(10);
+    group.measurement_time(Duration::from_secs(280));
     group.warm_up_time(Duration::from_secs(5));
 
-    let input_path = Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg");
+    let input_path = Path::new("img/sphere/PXL_20220918_115954889.PHOTOSPHERE.jpg");
     let output_dir = Path::new("target/bench_end_to_end_out");
 
     // Default configuration matching the Python script's defaults
@@ -49,7 +49,7 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
                 config.output.format,
                 config.output.quality,
             )
-            .expect("Failed to save tiles to disk");
+                .expect("Failed to save tiles to disk");
         })
     });
 
