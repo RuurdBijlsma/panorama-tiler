@@ -1,8 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use pano_tiler::{
-    process_panorama, save_to_disk, GeneratorConfig,
-    PartialPanoConfig, Projection,
-};
+use criterion::{Criterion, criterion_group, criterion_main};
+use pano_tiler::{GeneratorConfig, PartialPanoConfig, Projection, process_panorama, save_to_disk};
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
@@ -52,7 +49,7 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
                 config.output_format,
                 config.quality,
             )
-                .expect("Failed to save tiles to disk");
+            .expect("Failed to save tiles to disk");
         })
     });
 

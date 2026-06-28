@@ -127,11 +127,7 @@ fn generate(img_path: &Path, config: &GeneratorConfig) {
     // Save to disk
     let out_path = format!(
         "target/partial_sphere_{}",
-        img_path
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
+        img_path.file_name().unwrap().to_string_lossy().to_string(),
     );
     let output_dir = Path::new(&out_path);
     if output_dir.exists() {

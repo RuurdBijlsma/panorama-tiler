@@ -1,4 +1,8 @@
-use crate::{GeneratedTiles, GeneratorConfig, OutputFormat, PannellumConfig, Projection, TilerError, config, projection, tiler, PanoExif, exif_to_partial_pano_config, PartialPanoConfig};
+use crate::{
+    GeneratedTiles, GeneratorConfig, OutputFormat, PannellumConfig, PanoExif, PartialPanoConfig,
+    Projection, TilerError, config, exif_to_partial_pano_config, generate_cube_faces,
+    generate_pyramid,
+};
 use image::RgbImage;
 use image::codecs::jpeg::JpegEncoder;
 use rayon::prelude::*;
@@ -55,10 +59,10 @@ pub fn process_panorama(
     resolved_config.tile_size = clamped_tile_size;
 
     // 1. Generate high-resolution cube faces
-    let faces = projection::generate_cube_faces(src_image, &resolved_config, actual_cube_size);
+    let faces = generate_cube_faces(src_image, &resolved_config, actual_cube_size);
 
     // 2. Generate tiles pyramid structure
-    let generated_tiles = tiler::generate_pyramid(&faces, &resolved_config, actual_cube_size);
+    let generated_tiles = generate_pyramid(&faces, &resolved_config, actual_cube_size);
 
     // 3. Build serialization configuration structure for Pannellum
     let hfov = 100.0;
@@ -236,10 +240,10 @@ pub fn tile_panorama_file(
     // 4. Extract XMP metadata packets
     let mut xmp_metadata = None;
     let mut xmp_file = xmpkit::XmpFile::new();
-    if xmp_file.open(input_file).is_ok() {
-        if let Some(parsed_xmp) = xmp_file.get_xmp() {
-            xmp_metadata = Some(parsed_xmp.clone());
-        }
+    if xmp_file.open(input_file).is_ok()
+        && let Some(parsed_xmp) = xmp_file.get_xmp()
+    {
+        xmp_metadata = Some(parsed_xmp.clone());
     }
 
     // Initialize detection variables
@@ -261,7 +265,8 @@ pub fn tile_panorama_file(
                 .and_then(|v| v.to_string().parse::<f64>().ok())
         };
 
-        let projection_type = meta.get_property(gpano_ns, "ProjectionType")
+        let projection_type = meta
+            .get_property(gpano_ns, "ProjectionType")
             .map(|v| v.to_string());
 
         let cropped_area_height = get_gpano_f64("CroppedAreaImageHeightPixels");
@@ -280,9 +285,13 @@ pub fn tile_panorama_file(
         }
 
         // Check if we have complete partial photo sphere crop boundaries
-        if let (Some(cropped_w), Some(cropped_h), Some(full_w), Some(full_h), Some(cropped_t)) =
-            (cropped_area_width, cropped_area_height, full_pano_width, full_pano_height, cropped_area_top)
-        {
+        if let (Some(cropped_w), Some(cropped_h), Some(full_w), Some(full_h), Some(cropped_t)) = (
+            cropped_area_width,
+            cropped_area_height,
+            full_pano_width,
+            full_pano_height,
+            cropped_area_top,
+        ) {
             detected_gpano = true;
 
             // Build temporary EXIF container to derive consistent angles and offsets
@@ -309,28 +318,28 @@ pub fn tile_panorama_file(
     if !detected_gpano {
         let mut focal_length_35mm = None;
 
-        if let Some(exif) = &exif_metadata {
-            if let Some(field) = exif.get_field(exif::Tag::FocalLengthIn35mmFilm, exif::In::PRIMARY) {
-                focal_length_35mm = match &field.value {
-                    exif::Value::Rational(rationals) => rationals.first().map(|r| r.to_f64()),
-                    _ => field.value.get_uint(0).map(|v| v as f64),
-                };
-            }
+        if let Some(exif) = &exif_metadata
+            && let Some(field) = exif.get_field(exif::Tag::FocalLengthIn35mmFilm, exif::In::PRIMARY)
+        {
+            focal_length_35mm = match &field.value {
+                exif::Value::Rational(rationals) => rationals.first().map(|r| r.to_f64()),
+                _ => field.value.get_uint(0).map(|v| v as f64),
+            };
         }
 
-        if let Some(focal) = focal_length_35mm {
-            if focal > 0.0 {
-                projection = Projection::Cylindrical;
-                let crop_factor = 0.90; // Standard crop loss ratio for panorama stitches
-                if let Some(angles) = crate::helpers::config_helper::calculate_pano_angles(
-                    focal,
-                    width,
-                    height,
-                    crop_factor,
-                ) {
-                    haov = Some(angles.haov);
-                    vaov = Some(angles.vaov);
-                }
+        if let Some(focal) = focal_length_35mm
+            && focal > 0.0
+        {
+            projection = Projection::Cylindrical;
+            let crop_factor = 0.90; // Standard crop loss ratio for panorama stitches
+            if let Some(angles) = crate::helpers::config_helper::calculate_pano_angles(
+                focal,
+                width,
+                height,
+                crop_factor,
+            ) {
+                haov = Some(angles.haov);
+                vaov = Some(angles.vaov);
             }
         }
     }

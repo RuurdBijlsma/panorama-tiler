@@ -1,6 +1,9 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
-use pano_tiler::{PartialPanoConfig, Projection, GeneratorConfig, b83, calculate_pano_angles, projection, tiler, InterpolationMode};
+use pano_tiler::{
+    GeneratorConfig, PartialPanoConfig, Projection, b83, calculate_pano_angles,
+    generate_cube_faces, generate_pyramid,
+};
 use std::hint::black_box;
 use std::time::Duration;
 
@@ -55,7 +58,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     };
     group.bench_function("generate_cube_faces_equirect_full", |b| {
         b.iter(|| {
-            projection::generate_cube_faces(
+            generate_cube_faces(
                 black_box(&src_image),
                 black_box(&config_full),
                 black_box(256),
@@ -79,7 +82,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     };
     group.bench_function("generate_cube_faces_cylindrical_partial", |b| {
         b.iter(|| {
-            projection::generate_cube_faces(
+            generate_cube_faces(
                 black_box(&src_image),
                 black_box(&config_partial_cyl),
                 black_box(256),
@@ -104,11 +107,11 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
         cube_size: 256,
         ..Default::default()
     };
-    let faces_full = projection::generate_cube_faces(&src_image, &config_full, 256);
+    let faces_full = generate_cube_faces(&src_image, &config_full, 256);
 
     group.bench_function("generate_pyramid_full", |b| {
         b.iter(|| {
-            tiler::generate_pyramid(
+            generate_pyramid(
                 black_box(&faces_full),
                 black_box(&config_full),
                 black_box(256),
@@ -129,11 +132,11 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
         cube_size: 256,
         ..Default::default()
     };
-    let faces_partial = projection::generate_cube_faces(&src_image, &config_partial, 256);
+    let faces_partial = generate_cube_faces(&src_image, &config_partial, 256);
 
     group.bench_function("generate_pyramid_partial", |b| {
         b.iter(|| {
-            tiler::generate_pyramid(
+            generate_pyramid(
                 black_box(&faces_partial),
                 black_box(&config_partial),
                 black_box(256),

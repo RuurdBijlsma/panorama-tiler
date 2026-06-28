@@ -1,5 +1,5 @@
-use crate::config::{Projection, GeneratorConfig, InterpolationMode};
-use crate::utils::get_bg_color;
+use crate::config::{GeneratorConfig, InterpolationMode, Projection};
+use crate::logic::get_bg_color;
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
 use std::f64::consts::{FRAC_PI_2, PI};
@@ -123,7 +123,8 @@ pub fn generate_cube_faces(
                                             is_outside = true;
                                             0.0
                                         } else {
-                                            let normalized_phi = (phi_relative / half_vaov + 1.0) / 2.0;
+                                            let normalized_phi =
+                                                (phi_relative / half_vaov + 1.0) / 2.0;
                                             (1.0 - normalized_phi) * (src_height as f64)
                                         }
                                     }

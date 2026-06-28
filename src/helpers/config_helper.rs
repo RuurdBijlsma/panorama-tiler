@@ -12,7 +12,7 @@ pub struct DerivedAngles {
 /// * `width` - The width of the stitched image in pixels
 /// * `height` - The height of the stitched image in pixels
 /// * `crop_factor` - The estimated portion of the sensor height preserved after alignment.
-///                   Typically, 0.90 (90%) for standard sweeps.
+///   Typically, 0.90 (90%) for standard sweeps.
 pub fn calculate_pano_angles(
     focal_length_35mm_eq: f64,
     width: u32,

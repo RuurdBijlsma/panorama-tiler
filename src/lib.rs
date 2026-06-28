@@ -1,14 +1,14 @@
-pub mod b83;
-pub mod projection;
-pub mod tiler;
-
-mod helpers;
 mod config;
 mod error;
+mod helpers;
+mod logic;
 mod orchestrator;
 
-pub use config::{OutputFormat, InterpolationMode, PannellumConfig, PartialPanoConfig, Projection, GeneratorConfig};
-pub use helpers::*;
+pub use config::{
+    GeneratorConfig, InterpolationMode, OutputFormat, PannellumConfig, PartialPanoConfig,
+    Projection,
+};
 pub use error::TilerError;
+pub use helpers::*;
+pub use logic::*;
 pub use orchestrator::*;
-pub use tiler::GeneratedTiles;
