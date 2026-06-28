@@ -185,6 +185,7 @@ fn save_image(
             let mut encoder = JpegEncoder::new_with_quality(&mut writer, quality);
             encoder.encode_image(image)?;
         }
+        #[cfg(feature = "webp")]
         OutputFormat::Webp => {
             let (width, height) = image.dimensions();
             let encoder = webp::Encoder::from_rgb(image.as_raw(), width, height);

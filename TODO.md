@@ -1,6 +1,6 @@
 # TODO
 
-* output to webp, jpg, png
+* ✅ output to webp, jpg, png
 * cargo feature voor webp output
 * benchmarks
 * improve performance

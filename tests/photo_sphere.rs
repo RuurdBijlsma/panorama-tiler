@@ -5,7 +5,13 @@ use std::path::Path;
 
 #[test]
 fn test_generate_multires_panorama() {
-    let out_formats = &[OutputFormat::Jpeg, OutputFormat::Png, OutputFormat::Webp];
+    let out_formats = &[
+        OutputFormat::Jpeg,
+        OutputFormat::Png,
+        #[cfg(feature = "webp")]
+        OutputFormat::Webp,
+    ];
+    // webp 85 seems a good balance
     let qualities = &[75, 85, 95];
     for out_format in out_formats {
         for quality in qualities {

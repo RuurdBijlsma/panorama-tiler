@@ -14,6 +14,7 @@ pub enum OutputFormat {
     #[default]
     Jpeg,
     Png,
+    #[cfg(feature = "webp")]
     Webp,
 }
 
@@ -22,6 +23,7 @@ impl OutputFormat {
         match self {
             OutputFormat::Jpeg => "jpg",
             OutputFormat::Png => "png",
+            #[cfg(feature = "webp")]
             OutputFormat::Webp => "webp",
         }
     }
