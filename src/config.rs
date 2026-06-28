@@ -17,6 +17,16 @@ pub enum OutputFormat {
     Webp,
 }
 
+impl OutputFormat {
+    pub fn to_extension(&self) -> &'static str {
+        match self {
+            OutputFormat::Jpeg => "jpg",
+            OutputFormat::Png => "png",
+            OutputFormat::Webp => "webp",
+        }
+    }
+}
+
 /// Parameters for partial panorama mapping configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialPanoConfig {

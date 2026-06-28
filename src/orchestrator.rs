@@ -1,5 +1,6 @@
 use crate::{
-    GeneratedTiles, PannellumConfig, Projection, TilerConfig, TilerError, OutputFormat, config, projection, tiler,
+    GeneratedTiles, OutputFormat, PannellumConfig, Projection, TilerConfig, TilerError, config,
+    projection, tiler,
 };
 use image::RgbImage;
 use image::codecs::jpeg::JpegEncoder;
@@ -89,12 +90,6 @@ pub fn process_panorama(
 
     let auto_load = if config.auto_load { Some(true) } else { None };
 
-    let extension = match config.output_format {
-        OutputFormat::Jpeg => "jpg".to_string(),
-        OutputFormat::Png => "png".to_string(),
-        OutputFormat::Webp => "webp".to_string(),
-    };
-
     let multires = config::MultiResConfig {
         sht_hash: None,
         equirectangular_thumbnail: None,
@@ -105,7 +100,7 @@ pub fn process_panorama(
         } else {
             None
         },
-        extension,
+        extension: config.output_format.to_extension().to_owned(),
         tile_resolution: resolved_config.tile_size,
         max_level: generated_tiles.levels,
         cube_resolution: actual_cube_size,
@@ -142,11 +137,7 @@ pub fn save_to_disk(
 ) -> Result<(), TilerError> {
     fs::create_dir_all(output_dir)?;
 
-    let ext = match output_format {
-        OutputFormat::Jpeg => "jpg",
-        OutputFormat::Png => "png",
-        OutputFormat::Webp => "webp",
-    };
+    let ext = output_format.to_extension();
 
     // 1. Save standard multires tiles
     for tile in &generated.tiles {
