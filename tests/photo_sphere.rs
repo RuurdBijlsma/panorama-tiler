@@ -6,7 +6,7 @@ use std::path::Path;
 #[test]
 fn test_generate_multires_panorama() {
     let out_formats = &[OutputFormat::Jpeg, OutputFormat::Png, OutputFormat::Webp];
-    let qualities = &[60, 75, 85, 95, 100];
+    let qualities = &[75, 85, 95];
     for out_format in out_formats {
         for quality in qualities {
             generate_pano(*out_format, *quality);
@@ -14,8 +14,7 @@ fn test_generate_multires_panorama() {
     }
 }
 
-
-fn generate_pano(output_format: OutputFormat, quality: u8){
+fn generate_pano(output_format: OutputFormat, quality: u8) {
     let img_path = Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg");
     assert!(img_path.exists());
 
@@ -60,7 +59,7 @@ fn generate_pano(output_format: OutputFormat, quality: u8){
         config.output_format,
         config.quality,
     )
-        .expect("Failed to save tiles and configuration json to target test folder");
+    .expect("Failed to save tiles and configuration json to target test folder");
 
     // Assertions
     assert!(

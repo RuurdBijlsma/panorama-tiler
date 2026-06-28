@@ -1,4 +1,7 @@
-use pano_tiler::{PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles, process_panorama, save_to_disk, OutputFormat};
+use pano_tiler::{
+    OutputFormat, PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles,
+    process_panorama, save_to_disk,
+};
 use std::path::Path;
 
 #[test]

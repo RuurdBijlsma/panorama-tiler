@@ -127,7 +127,7 @@ pub fn generate_cube_faces(
                     let pixel = if is_outside {
                         bg_color
                     } else {
-                        sample_bilinear(
+                        sample_bicubic(
                             src_image,
                             src_x,
                             src_y,
@@ -144,8 +144,8 @@ pub fn generate_cube_faces(
         .collect()
 }
 
-/// Helper function to perform standard bilinear sampling.
-fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
+/// Helper function to perform bicubic sampling.
+fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
     let (w, h) = img.dimensions();
     let w_f = w as f64;
     let h_f = h as f64;
@@ -156,30 +156,73 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
 
     let x_wrapped = if wrap_x { x.rem_euclid(w_f) } else { x };
 
-    let x0 = x_wrapped.floor();
-    let y0 = y.floor();
-    let x1 = if wrap_x {
-        (x0 + 1.0) % w_f
-    } else {
-        (x0 + 1.0).min(w_f - 1.0)
+    // Shift coordinates by -0.5 to align continuous mapping with pixel centers
+    let x_center = x_wrapped - 0.5;
+    let y_center = y - 0.5;
+
+    let x0 = x_center.floor();
+    let y0 = y_center.floor();
+
+    let dx = x_center - x0;
+    let dy = y_center - y0;
+
+    let x0_i = x0 as i32;
+    let y0_i = y0 as i32;
+
+    // Catmull-Rom cubic spline weights
+    let get_weights = |t: f64| -> [f64; 4] {
+        let t2 = t * t;
+        let t3 = t2 * t;
+        [
+            0.5 * (-t3 + 2.0 * t2 - t),
+            0.5 * (3.0 * t3 - 5.0 * t2 + 2.0),
+            0.5 * (-3.0 * t3 + 4.0 * t2 + t),
+            0.5 * (t3 - t2),
+        ]
     };
-    let y1 = (y0 + 1.0).min(h_f - 1.0);
 
-    let dx = x_wrapped - x0;
-    let dy = y - y0;
+    let wx = get_weights(dx);
+    let wy = get_weights(dy);
 
-    let p00 = img.get_pixel(x0 as u32, y0 as u32);
-    let p10 = img.get_pixel(x1 as u32, y0 as u32);
-    let p01 = img.get_pixel(x0 as u32, y1 as u32);
-    let p11 = img.get_pixel(x1 as u32, y1 as u32);
+    let mut r_sum = 0.0;
+    let mut g_sum = 0.0;
+    let mut b_sum = 0.0;
 
-    let mut out = [0u8; 3];
-    for c in 0..3 {
-        let val = (1.0 - dx) * (1.0 - dy) * p00[c] as f64
-            + dx * (1.0 - dy) * p10[c] as f64
-            + (1.0 - dx) * dy * p01[c] as f64
-            + dx * dy * p11[c] as f64;
-        out[c] = val.round().clamp(0.0, 255.0) as u8;
+    for j in -1..=2 {
+        let py = y0_i + j;
+        let weight_y = wy[(j + 1) as usize];
+        if weight_y == 0.0 {
+            continue;
+        }
+
+        let py_clamped = py.clamp(0, h as i32 - 1) as u32;
+
+        for i in -1..=2 {
+            let px = x0_i + i;
+            let weight_x = wx[(i + 1) as usize];
+            let weight = weight_x * weight_y;
+            if weight == 0.0 {
+                continue;
+            }
+
+            let pixel = if wrap_x {
+                let px_wrapped = px.rem_euclid(w as i32) as u32;
+                img.get_pixel(px_wrapped, py_clamped)
+            } else if px < 0 || px >= w as i32 {
+                &bg
+            } else {
+                img.get_pixel(px as u32, py_clamped)
+            };
+
+            r_sum += pixel[0] as f64 * weight;
+            g_sum += pixel[1] as f64 * weight;
+            b_sum += pixel[2] as f64 * weight;
+        }
     }
-    Rgb(out)
+
+    Rgb([
+        r_sum.round().clamp(0.0, 255.0) as u8,
+        g_sum.round().clamp(0.0, 255.0) as u8,
+        b_sum.round().clamp(0.0, 255.0) as u8,
+    ])
 }
