@@ -1,4 +1,5 @@
 use crate::config::OutputConfig;
+#[cfg(feature = "metadata")]
 use crate::exif::guess_pano_angles_from_bytes;
 use crate::{
     GeneratedTiles, OutputFormat, PannellumConfig, TilerConfig, TilerError, generate_cube_faces,
@@ -114,6 +115,7 @@ pub fn save_to_disk(
 /// tiles, and write the output to a directory.
 ///
 /// If no metadata is found, it will fall back to aspect-ratio-based heuristics.
+#[cfg(feature = "metadata")]
 pub fn tile_panorama_with_guessed_angles(
     input_file: &Path,
     output_dir: &Path,
