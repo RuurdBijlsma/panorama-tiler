@@ -1,16 +1,9 @@
-use pano_tiler::exif_helper::{exif_to_partial_pano_config, PanoExif};
-use pano_tiler::{process_panorama, save_to_disk, GeneratorConfig};
-use std::path::Path;
+use pano_tiler::exif_helper::{PanoExif, exif_to_partial_pano_config};
+use pano_tiler::{GeneratorConfig, process_panorama, save_to_disk};
+use std::path::{Path, PathBuf};
 
-#[test]
-fn test_generate_multires_panorama() {
-    let img_path = Path::new("img/PXL_20210730_144252204.PHOTOSPHERE.jpg");
-    assert!(img_path.exists());
-
-    // Load the pano
-    let dynamic_img = image::open(img_path).expect("Failed to open source integration test image");
-    let rgb_img = dynamic_img.to_rgb8();
-
+fn image1_config() -> (PathBuf, GeneratorConfig) {
+    let img = Path::new("img/PXL_20210730_144252204.PHOTOSPHERE.jpg").to_path_buf();
     // From exif:
     let pose_heading_degrees = 135.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
@@ -22,21 +15,105 @@ fn test_generate_multires_panorama() {
     });
     let config = GeneratorConfig {
         partial_config,
-        avoid_showing_background: false,
         north_offset: Some(pose_heading_degrees),
         ..Default::default()
     };
+    (img, config)
+}
+
+fn image2_config() -> (PathBuf, GeneratorConfig) {
+    let img = Path::new("img/PXL_20210730_183041272.PANO.jpg").to_path_buf();
+    // From exif:
+    let pose_heading_degrees = 87.0;
+    let partial_config = exif_to_partial_pano_config(&PanoExif {
+        cropped_area_image_height_pixels: 1640,
+        cropped_area_image_width_pixels: 4512,
+        full_pano_height_pixels: 4653,
+        full_pano_width_pixels: 9306,
+        cropped_area_top_pixels: 1605,
+    });
+    let config = GeneratorConfig {
+        yaw_padding: 10.0,
+        pitch_padding: 5.0,
+        partial_config,
+        north_offset: Some(pose_heading_degrees),
+        ..Default::default()
+    };
+    (img, config)
+}
+
+fn image3_config() -> (PathBuf, GeneratorConfig) {
+    let img = Path::new("img/PANO_20210207_152515.jpg").to_path_buf();
+    // From exif:
+    let pose_heading_degrees = 215.0;
+    let partial_config = exif_to_partial_pano_config(&PanoExif {
+        cropped_area_image_height_pixels: 5878,
+        cropped_area_image_width_pixels: 5442,
+        full_pano_height_pixels: 6809,
+        full_pano_width_pixels: 13617,
+        cropped_area_top_pixels: 918,
+    });
+    let config = GeneratorConfig {
+        partial_config,
+        north_offset: Some(pose_heading_degrees),
+        ..Default::default()
+    };
+    (img, config)
+}
+
+fn image4_config() -> (PathBuf, GeneratorConfig) {
+    let img = Path::new("img/PANO_20200806_210426.jpg").to_path_buf();
+    // From exif:
+    let pose_heading_degrees = 123.0;
+    let partial_config = exif_to_partial_pano_config(&PanoExif {
+        cropped_area_image_height_pixels: 4582,
+        cropped_area_image_width_pixels: 6982,
+        full_pano_height_pixels: 6959,
+        full_pano_width_pixels: 13918,
+        cropped_area_top_pixels: 0,
+    });
+    let config = GeneratorConfig {
+        partial_config,
+        north_offset: Some(pose_heading_degrees),
+        ..Default::default()
+    };
+    (img, config)
+}
+
+#[test]
+fn test_generate_multires_panorama() {
+    let img_configs = &[
+        image1_config(),
+        image2_config(),
+        image3_config(),
+        image4_config(),
+    ];
+    for (img, config) in img_configs {
+        generate(img, config);
+    }
+}
+
+fn generate(img_path: &Path, config: &GeneratorConfig) {
+    assert!(img_path.exists());
+
+    // Load the pano
+    let dynamic_img = image::open(img_path).expect("Failed to open source integration test image");
+    let rgb_img = dynamic_img.to_rgb8();
 
     // Process the panorama
-    let (tiles, config_json, actual_cube_size) = process_panorama(&rgb_img, &config)
+    let (tiles, config_json, _actual_cube_size) = process_panorama(&rgb_img, &config)
         .expect("Failed to process panorama in the tiler pipeline");
 
-    println!("Detected cube face resolution: {}", actual_cube_size);
-    println!("Total zoom level hierarchy: {}", tiles.levels);
-    println!("Total tiles generated: {}", tiles.tiles.len());
-
     // Save to disk
-    let output_dir = Path::new("target/partial_sphere");
+    let out_path = format!(
+        "target/partial_sphere_{}",
+        img_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+    );
+    let output_dir = Path::new(&out_path);
     if output_dir.exists() {
         std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
     }
@@ -62,4 +139,6 @@ fn test_generate_multires_panorama() {
         output_dir.join("fallback").exists(),
         "Missing fallback folder"
     );
+
+    println!("Output directory: {}", output_dir.display());
 }

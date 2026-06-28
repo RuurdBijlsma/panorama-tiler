@@ -1,10 +1,12 @@
-use pano_tiler::{
-    process_panorama, save_to_disk, GeneratorConfig, OutputFormat,
-};
+use pano_tiler::{GeneratorConfig, OutputFormat, process_panorama, save_to_disk};
 use std::path::Path;
 
 #[test]
 fn test_generate_multires_panorama() {
+    let input_images = &[
+        Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg"),
+        Path::new("img/PXL_20210722_151141413.PHOTOSPHERE.jpg"),
+    ];
     let out_formats = &[
         OutputFormat::Jpeg,
         OutputFormat::Png,
@@ -12,27 +14,28 @@ fn test_generate_multires_panorama() {
         OutputFormat::Webp,
     ];
     // webp 85 seems a good balance
-    let qualities = &[75, 85, 95];
+    let qualities = &[85];
     for out_format in out_formats {
         for quality in qualities {
-            generate_pano(*out_format, *quality);
+            for image_path in input_images {
+                generate_pano(image_path, *out_format, *quality);
+            }
         }
     }
 }
 
-fn generate_pano(output_format: OutputFormat, quality: u8) {
-    let img_path = Path::new("img/PXL_20220918_115954889.PHOTOSPHERE.jpg");
-    assert!(img_path.exists());
+fn generate_pano(image_path: &Path, output_format: OutputFormat, quality: u8) {
+    assert!(image_path.exists());
 
     // Load the photosphere
-    let dynamic_img = image::open(img_path).expect("Failed to open source integration test image");
+    let dynamic_img =
+        image::open(image_path).expect("Failed to open source integration test image");
     let rgb_img = dynamic_img.to_rgb8();
 
     // Define custom options (Defaults here model a full 360 panorama)
     let config = GeneratorConfig {
         output_format,
         quality,
-        north_offset: Some(270.0),
         ..Default::default()
     };
 
@@ -46,9 +49,14 @@ fn generate_pano(output_format: OutputFormat, quality: u8) {
 
     // Save to disk
     let out_path = format!(
-        "target/sphere_output_{}_q{}",
+        "target/sphere_output_{}_q{}_{}",
         config.output_format.to_extension(),
-        config.quality
+        config.quality,
+        image_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
     );
     let output_dir = Path::new(&out_path);
     if output_dir.exists() {

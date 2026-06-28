@@ -10,3 +10,4 @@
 * add function to gen pano and save to disc in 1
 * exif helpers?
 * write readme
+* what do i do with "view-layer" fields like "compass" to the pannellum config.
