@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use pano_tiler::{OutputConfig, PanoAngles, TilerConfig, process_panorama, save_to_disk};
+use panorama_tiler::{OutputConfig, PanoAngles, TilerConfig, process_panorama, save_to_disk};
 use std::fs;
 use std::path::Path;
 use std::time::Duration;

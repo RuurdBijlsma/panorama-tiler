@@ -1160,7 +1160,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pano-tiler"
+name = "panorama-tiler"
 version = "0.1.0"
 dependencies = [
  "criterion",

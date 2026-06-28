@@ -1,5 +1,5 @@
-use pano_tiler::exif::{PanoExif, exif_to_partial_pano_config};
-use pano_tiler::{OutputConfig, TilerConfig, process_panorama, save_to_disk};
+use panorama_tiler::exif::{PanoExif, exif_to_partial_pano_config};
+use panorama_tiler::{OutputConfig, TilerConfig, process_panorama, save_to_disk};
 use std::path::{Path, PathBuf};
 
 fn image1_config() -> (PathBuf, TilerConfig) {

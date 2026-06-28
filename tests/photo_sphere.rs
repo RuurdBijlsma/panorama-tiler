@@ -1,4 +1,4 @@
-use pano_tiler::{OutputConfig, OutputFormat, TilerConfig, process_panorama, save_to_disk};
+use panorama_tiler::{OutputConfig, OutputFormat, TilerConfig, process_panorama, save_to_disk};
 use std::path::Path;
 
 #[test]

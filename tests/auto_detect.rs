@@ -1,4 +1,4 @@
-use pano_tiler::{OutputConfig, OutputFormat, tile_panorama_with_guessed_angles};
+use panorama_tiler::{OutputConfig, OutputFormat, tile_panorama_with_guessed_angles};
 use std::path::Path;
 
 #[test]

@@ -1,7 +1,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
-use pano_tiler::exif::calc_cylindrical_pano_angles;
-use pano_tiler::{
+use panorama_tiler::exif::calc_cylindrical_pano_angles;
+use panorama_tiler::{
     OutputConfig, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces, generate_pyramid,
 };
 use std::hint::black_box;
@@ -173,7 +173,7 @@ fn bench_full_integration(c: &mut Criterion) {
     };
 
     group.bench_function("process_panorama_4k", |b| {
-        b.iter(|| pano_tiler::process_panorama(black_box(&src_image), black_box(&config)).unwrap())
+        b.iter(|| panorama_tiler::process_panorama(black_box(&src_image), black_box(&config)).unwrap())
     });
 
     group.finish();
