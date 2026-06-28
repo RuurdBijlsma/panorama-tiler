@@ -1,5 +1,5 @@
 use pano_tiler::{
-    process_panorama, save_to_disk, OutputFormat, GeneratorConfig,
+    process_panorama, save_to_disk, GeneratorConfig, OutputFormat,
 };
 use std::path::Path;
 
@@ -32,6 +32,7 @@ fn generate_pano(output_format: OutputFormat, quality: u8) {
     let config = GeneratorConfig {
         output_format,
         quality,
+        north_offset: Some(270.0),
         ..Default::default()
     };
 

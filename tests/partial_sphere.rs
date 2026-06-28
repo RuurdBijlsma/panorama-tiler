@@ -1,5 +1,5 @@
 use pano_tiler::exif_helper::{exif_to_partial_pano_config, PanoExif};
-use pano_tiler::{PartialPanoConfig, GeneratorConfig, process_panorama, save_to_disk};
+use pano_tiler::{process_panorama, save_to_disk, GeneratorConfig};
 use std::path::Path;
 
 #[test]
@@ -12,17 +12,18 @@ fn test_generate_multires_panorama() {
     let rgb_img = dynamic_img.to_rgb8();
 
     // From exif:
+    let pose_heading_degrees = 135.0;
     let partial_config = exif_to_partial_pano_config(&PanoExif {
         cropped_area_image_height_pixels: 4530,
         cropped_area_image_width_pixels: 5890,
         full_pano_height_pixels: 7731,
         full_pano_width_pixels: 15462,
         cropped_area_top_pixels: 282,
-        pose_heading_degrees: Some(135.0),
     });
     let config = GeneratorConfig {
         partial_config,
         avoid_showing_background: false,
+        north_offset: Some(pose_heading_degrees),
         ..Default::default()
     };
 

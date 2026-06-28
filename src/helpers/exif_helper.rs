@@ -6,7 +6,6 @@ pub struct PanoExif {
     pub cropped_area_top_pixels: u32,
     pub cropped_area_image_width_pixels: u32,
     pub cropped_area_image_height_pixels: u32,
-    pub pose_heading_degrees: Option<f64>,
 }
 
 pub fn exif_to_partial_pano_config(exif_info: &PanoExif) -> PartialPanoConfig {
@@ -29,13 +28,10 @@ pub fn exif_to_partial_pano_config(exif_info: &PanoExif) -> PartialPanoConfig {
     let center_y_crop = cropped_area_image_height_pixels / 2.0;
     let horizon_pixels = (horizon_y_crop - center_y_crop).round() as i32;
 
-    let north_offset = exif_info.pose_heading_degrees.unwrap_or(0.0);
-
     PartialPanoConfig {
         haov,
         vaov,
         v_offset,
         horizon_pixels,
-        north_offset,
     }
 }

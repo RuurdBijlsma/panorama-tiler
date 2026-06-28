@@ -93,12 +93,6 @@ pub fn process_panorama(
 
     let auto_load = if config.auto_load { Some(true) } else { None };
 
-    let north_offset = if config.partial_config.north_offset != 0.0 {
-        Some(config.partial_config.north_offset)
-    } else {
-        None
-    };
-
     let multires = config::MultiResConfig {
         sht_hash: None,
         equirectangular_thumbnail: None,
@@ -129,7 +123,7 @@ pub fn process_panorama(
         background_color,
         avoid_showing_background,
         auto_load,
-        north_offset,
+        north_offset: config.north_offset,
         pano_type: "multires".to_string(),
         multi_res: multires,
     };

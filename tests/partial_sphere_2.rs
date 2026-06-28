@@ -1,4 +1,4 @@
-use pano_tiler::exif_helper::{exif_to_partial_pano_config, PanoExif};
+use pano_tiler::exif_helper::{PanoExif, exif_to_partial_pano_config};
 use pano_tiler::{GeneratorConfig, process_panorama, save_to_disk};
 use std::path::Path;
 
@@ -18,13 +18,14 @@ fn test_generate_multires_panorama() {
         full_pano_height_pixels: 4653,
         full_pano_width_pixels: 9306,
         cropped_area_top_pixels: 1605,
-        pose_heading_degrees: Some(87.0),
     });
+    let pose_heading_degrees = 87.0;
     let config = GeneratorConfig {
         partial_config,
         avoid_showing_background: false,
         yaw_padding: 10.0,
         pitch_padding: 5.0,
+        north_offset: Some(pose_heading_degrees),
         ..Default::default()
     };
 

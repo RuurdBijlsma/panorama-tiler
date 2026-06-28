@@ -49,8 +49,6 @@ pub struct PartialPanoConfig {
     pub v_offset: f64,
     /// Offset of the horizon in pixels (can be negative).
     pub horizon_pixels: i32,
-    /// Compass heading offset of the center (degrees).
-    pub north_offset: f64,
 }
 
 impl Default for PartialPanoConfig {
@@ -60,7 +58,6 @@ impl Default for PartialPanoConfig {
             vaov: 180.0,
             v_offset: 0.0,
             horizon_pixels: 0,
-            north_offset: 0.0,
         }
     }
 }
@@ -83,6 +80,8 @@ pub struct GeneratorConfig {
     pub background_color: [f64; 3],
     /// Constrain viewport boundaries within image limits.
     pub avoid_showing_background: bool,
+    /// Compass heading offset of the center (degrees).
+    pub north_offset: Option<f64>,
 }
 
 impl Default for GeneratorConfig {
@@ -101,6 +100,7 @@ impl Default for GeneratorConfig {
             avoid_showing_background: false,
             yaw_padding: 0.0,
             pitch_padding: 0.0,
+            north_offset: None,
         }
     }
 }
