@@ -33,116 +33,128 @@ pub fn generate_cube_faces(
         .map(|(letter, yaw, pitch)| {
             let mut face_img = RgbImage::new(actual_cube_size, actual_cube_size);
 
+            // Precompute trigonometric values for the face
             let cos_p = pitch.cos();
             let sin_p = pitch.sin();
             let cos_y = yaw.cos();
             let sin_y = yaw.sin();
-            for row in 0..actual_cube_size {
-                for col in 0..actual_cube_size {
-                    let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
-                    let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
 
-                    let x_local = u;
-                    let y_local = -v; // Invert because image rows increase downwards
-                    let z_local = 1.0;
+            let stride = actual_cube_size as usize * 3;
 
-                    // 1. Pitch rotation (around X-axis)
-                    let cos_p = cos_p;
-                    let sin_p = sin_p;
-                    let x1 = x_local;
-                    let y1 = y_local * cos_p - z_local * sin_p;
-                    let z1 = y_local * sin_p + z_local * cos_p;
+            // Stable conversion from RgbImage to &mut [u8] via DerefMut
+            let face_pixels: &mut [u8] = &mut face_img;
 
-                    // 2. Yaw rotation (around Y-axis)
-                    let cos_y = cos_y;
-                    let sin_y = sin_y;
-                    let x2 = x1 * cos_y + z1 * sin_y;
-                    let y2 = y1;
-                    let z2 = -x1 * sin_y + z1 * cos_y;
+            // Process every row of this face in parallel
+            face_pixels
+                .par_chunks_exact_mut(stride)
+                .enumerate()
+                .for_each(|(row, row_pixels)| {
+                    for col in 0..actual_cube_size {
+                        let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
+                        let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
 
-                    // Convert to a 3D unit direction ray
-                    let length = (x2 * x2 + y2 * y2 + z2 * z2).sqrt();
-                    let x_dir = x2 / length;
-                    let y_dir = y2 / length;
-                    let z_dir = z2 / length;
+                        let x_local = u;
+                        let y_local = -v; // Invert because image rows increase downwards
+                        let z_local = 1.0;
 
-                    // Map the 3D vector back to spherical coordinates (yaw/pitch angles)
-                    let theta = x_dir.atan2(z_dir);
-                    let phi = y_dir.asin();
+                        // 1. Pitch rotation (around X-axis)
+                        let x1 = x_local;
+                        let y1 = y_local * cos_p - z_local * sin_p;
+                        let z1 = y_local * sin_p + z_local * cos_p;
 
-                    let mut is_outside = false;
+                        // 2. Yaw rotation (around Y-axis)
+                        let x2 = x1 * cos_y + z1 * sin_y;
+                        let y2 = y1;
+                        let z2 = -x1 * sin_y + z1 * cos_y;
 
-                    // Horizontal projection mapping
-                    let src_x = if config.partial_config.haov >= 360.0 {
-                        let normalized_theta = (theta + PI) / (2.0 * PI);
-                        normalized_theta * (src_width as f64)
-                    } else {
-                        let half_haov = haov_rad / 2.0;
-                        if theta.abs() > half_haov {
-                            is_outside = true;
-                            0.0
-                        } else {
-                            let normalized_theta = (theta / half_haov + 1.0) / 2.0;
+                        // Convert to a 3D unit direction ray
+                        let length = (x2 * x2 + y2 * y2 + z2 * z2).sqrt();
+                        let x_dir = x2 / length;
+                        let y_dir = y2 / length;
+                        let z_dir = z2 / length;
+
+                        // Map the 3D vector back to spherical coordinates (yaw/pitch angles)
+                        let theta = x_dir.atan2(z_dir);
+                        let phi = y_dir.asin();
+
+                        let mut is_outside = false;
+
+                        // Horizontal projection mapping
+                        let src_x = if config.partial_config.haov >= 360.0 {
+                            let normalized_theta = (theta + PI) / (2.0 * PI);
                             normalized_theta * (src_width as f64)
-                        }
-                    };
-
-                    // Vertical projection mapping
-                    let src_y = if !is_outside {
-                        match config.projection {
-                            Projection::Cylindrical => {
-                                let half_vaov = vaov_rad / 2.0;
-                                let max_y_cyl = half_vaov.tan();
-                                let y_cyl = phi.tan();
-
-                                if y_cyl.abs() > max_y_cyl {
-                                    is_outside = true;
-                                    0.0
-                                } else {
-                                    let normalized_y = y_cyl / max_y_cyl;
-                                    let y_base = (1.0 - normalized_y) / 2.0 * (src_height as f64);
-                                    y_base + (horizon_pixels as f64)
-                                }
+                        } else {
+                            let half_haov = haov_rad / 2.0;
+                            if theta.abs() > half_haov {
+                                is_outside = true;
+                                0.0
+                            } else {
+                                let normalized_theta = (theta / half_haov + 1.0) / 2.0;
+                                normalized_theta * (src_width as f64)
                             }
-                            Projection::Equirectangular => {
-                                if config.partial_config.vaov >= 180.0 {
-                                    let normalized_phi = (FRAC_PI_2 - phi) / PI;
-                                    let y_base = normalized_phi * (src_height as f64);
-                                    y_base + (horizon_pixels as f64)
-                                } else {
-                                    let half_vaov = vaov_rad / 2.0;
+                        };
 
-                                    if phi.abs() > half_vaov {
+                        // Vertical projection mapping
+                        let src_y = if !is_outside {
+                            match config.projection {
+                                Projection::Cylindrical => {
+                                    let half_vaov = vaov_rad / 2.0;
+                                    let max_y_cyl = half_vaov.tan();
+                                    let y_cyl = phi.tan();
+
+                                    if y_cyl.abs() > max_y_cyl {
                                         is_outside = true;
                                         0.0
                                     } else {
-                                        let normalized_phi = (phi / half_vaov + 1.0) / 2.0;
+                                        let normalized_y = y_cyl / max_y_cyl;
                                         let y_base =
-                                            (1.0 - normalized_phi) / 2.0 * (src_height as f64);
+                                            (1.0 - normalized_y) / 2.0 * (src_height as f64);
                                         y_base + (horizon_pixels as f64)
                                     }
                                 }
+                                Projection::Equirectangular => {
+                                    if config.partial_config.vaov >= 180.0 {
+                                        let normalized_phi = (FRAC_PI_2 - phi) / PI;
+                                        let y_base = normalized_phi * (src_height as f64);
+                                        y_base + (horizon_pixels as f64)
+                                    } else {
+                                        let half_vaov = vaov_rad / 2.0;
+
+                                        if phi.abs() > half_vaov {
+                                            is_outside = true;
+                                            0.0
+                                        } else {
+                                            let normalized_phi = (phi / half_vaov + 1.0) / 2.0;
+                                            let y_base =
+                                                (1.0 - normalized_phi) / 2.0 * (src_height as f64);
+                                            y_base + (horizon_pixels as f64)
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    } else {
-                        0.0
-                    };
+                        } else {
+                            0.0
+                        };
 
-                    let pixel = if is_outside {
-                        bg_color
-                    } else {
-                        sample_bicubic(
-                            src_image,
-                            src_x,
-                            src_y,
-                            config.partial_config.haov >= 360.0,
-                            bg_color,
-                        )
-                    };
+                        let pixel = if is_outside {
+                            bg_color
+                        } else {
+                            sample_bicubic(
+                                src_image,
+                                src_x,
+                                src_y,
+                                config.partial_config.haov >= 360.0,
+                                bg_color,
+                            )
+                        };
 
-                    face_img.put_pixel(col, row, pixel);
-                }
-            }
+                        let offset = col as usize * 3;
+                        row_pixels[offset] = pixel[0];
+                        row_pixels[offset + 1] = pixel[1];
+                        row_pixels[offset + 2] = pixel[2];
+                    }
+                });
+
             (letter, face_img)
         })
         .collect()

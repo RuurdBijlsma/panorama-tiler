@@ -1,6 +1,7 @@
 use crate::config::TilerConfig;
 use crate::utils::get_bg_color;
 use image::RgbImage;
+use rayon::prelude::*;
 use std::collections::BTreeSet;
 
 /// A representation of an individual generated tile.
@@ -37,6 +38,25 @@ struct MissingTile {
     row: u32,
 }
 
+/// Checks if a region in an image contains exclusively background pixels without generating allocations.
+fn is_region_empty(
+    img: &RgbImage,
+    left: u32,
+    upper: u32,
+    width: u32,
+    height: u32,
+    bg_color: image::Rgb<u8>,
+) -> bool {
+    for y in upper..(upper + height) {
+        for x in left..(left + width) {
+            if *img.get_pixel(x, y) != bg_color {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
@@ -63,63 +83,74 @@ pub fn generate_pyramid(
         current_size /= 2;
     }
 
-    let mut tiles = Vec::new();
-    let mut missing_tiles = Vec::new();
+    let is_partial = config.partial_config.haov < 360.0 || config.partial_config.vaov < 180.0;
 
-    for (f_idx, &(letter, ref full_face)) in faces.iter().enumerate() {
-        let mut current_face = full_face.clone();
+    // Generate pyramids across all faces in parallel
+    let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) = faces
+        .par_iter()
+        .enumerate()
+        .map(|(f_idx, &(letter, ref full_face))| {
+            let mut local_tiles = Vec::new();
+            let mut local_missing = Vec::new();
+            let mut current_face = full_face.clone();
 
-        for level in (1..=levels).rev() {
-            let size = level_sizes[level as usize];
-            let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
+            for level in (1..=levels).rev() {
+                let size = level_sizes[level as usize];
+                let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
 
-            if level < levels {
-                // Downscale face recursively using Lanczos algorithm
-                current_face = image::imageops::resize(
-                    &current_face,
-                    size,
-                    size,
-                    image::imageops::FilterType::Lanczos3,
-                );
-            }
+                if level < levels {
+                    // Downscale face recursively using Lanczos algorithm
+                    current_face = image::imageops::resize(
+                        &current_face,
+                        size,
+                        size,
+                        image::imageops::FilterType::Lanczos3,
+                    );
+                }
 
-            for row in 0..num_tiles_wide_high {
-                for col in 0..num_tiles_wide_high {
-                    let left = col * tile_size;
-                    let upper = row * tile_size;
-                    let width = tile_size.min(size - left);
-                    let height = tile_size.min(size - upper);
+                for row in 0..num_tiles_wide_high {
+                    for col in 0..num_tiles_wide_high {
+                        let left = col * tile_size;
+                        let upper = row * tile_size;
+                        let width = tile_size.min(size - left);
+                        let height = tile_size.min(size - upper);
 
-                    let tile_crop =
-                        image::imageops::crop_imm(&current_face, left, upper, width, height)
-                            .to_image();
-
-                    // Check if the cropped tile contains exclusively background pixels
-                    let is_empty = tile_crop.pixels().all(|&pixel| pixel == bg_color);
-
-                    // For partial panoramas, discard blank background tiles
-                    let is_partial =
-                        config.partial_config.haov < 360.0 || config.partial_config.vaov < 180.0;
-                    if is_partial && is_empty {
-                        missing_tiles.push(MissingTile {
-                            face_idx: f_idx,
-                            level,
-                            col,
-                            row,
-                        });
-                    } else {
-                        tiles.push(TileItem {
-                            level,
-                            face: letter,
-                            col,
-                            row,
-                            image: tile_crop,
-                        });
+                        // Avoid allocating new sub-images if the entire region is verified empty
+                        if is_partial
+                            && is_region_empty(&current_face, left, upper, width, height, bg_color)
+                        {
+                            local_missing.push(MissingTile {
+                                face_idx: f_idx,
+                                level,
+                                col,
+                                row,
+                            });
+                        } else {
+                            let tile_crop = image::imageops::crop_imm(
+                                &current_face,
+                                left,
+                                upper,
+                                width,
+                                height,
+                            )
+                                .to_image();
+                            local_tiles.push(TileItem {
+                                level,
+                                face: letter,
+                                col,
+                                row,
+                                image: tile_crop,
+                            });
+                        }
                     }
                 }
             }
-        }
-    }
+            (local_tiles, local_missing)
+        })
+        .unzip();
+
+    let tiles: Vec<TileItem> = tiles_nested.into_iter().flatten().collect();
+    let missing_tiles: Vec<MissingTile> = missing_nested.into_iter().flatten().collect();
 
     // Process missing tiles string
     let missing_tiles_str = if !missing_tiles.is_empty() {

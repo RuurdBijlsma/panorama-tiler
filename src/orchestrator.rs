@@ -4,6 +4,7 @@ use crate::{
 };
 use image::RgbImage;
 use image::codecs::jpeg::JpegEncoder;
+use rayon::prelude::*;
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
@@ -139,29 +140,37 @@ pub fn save_to_disk(
 
     let ext = output_format.to_extension();
 
-    // 1. Save standard multires tiles
-    for tile in &generated.tiles {
-        let level_dir = output_dir.join(tile.level.to_string());
+    // Create zoom level folders
+    for level in 1..=generated.levels {
+        let level_dir = output_dir.join(level.to_string());
         fs::create_dir_all(&level_dir)?;
-
-        let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
-        let filepath = level_dir.join(filename);
-        save_image(&tile.image, &filepath, output_format, quality)?;
     }
 
-    // 2. Save fallback tiles
+    generated
+        .tiles
+        .par_iter()
+        .try_for_each(|tile| -> Result<(), TilerError> {
+            let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
+            let filepath = output_dir.join(tile.level.to_string()).join(filename);
+            save_image(&tile.image, &filepath, output_format, quality)?;
+            Ok(())
+        })?;
+
     if !generated.fallback_tiles.is_empty() {
         let fallback_dir = output_dir.join("fallback");
         fs::create_dir_all(&fallback_dir)?;
 
-        for fallback in &generated.fallback_tiles {
-            let filename = format!("{}.{}", fallback.face, ext);
-            let filepath = fallback_dir.join(filename);
-            save_image(&fallback.image, &filepath, output_format, quality)?;
-        }
+        generated
+            .fallback_tiles
+            .par_iter()
+            .try_for_each(|fallback| -> Result<(), TilerError> {
+                let filename = format!("{}.{}", fallback.face, ext);
+                let filepath = fallback_dir.join(filename);
+                save_image(&fallback.image, &filepath, output_format, quality)?;
+                Ok(())
+            })?;
     }
 
-    // 3. Save config.json
     let config_path = output_dir.join("config.json");
     let file = File::create(config_path)?;
     serde_json::to_writer_pretty(file, config_json)?;
