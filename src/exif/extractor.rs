@@ -1,35 +1,40 @@
 use crate::exif::{PanoExif, calc_cylindrical_pano_angles, exif_to_partial_pano_config};
 use crate::{PanoAngles, Projection, TilerError};
 use exif::Exif;
-use std::fs::File;
+use std::io::Cursor;
 use std::path::Path;
 use xmpkit::XmpMeta;
 
-fn get_exif_metadata(file: &Path) -> Option<Exif> {
-    let Ok(file) = File::open(file) else {
-        return None;
-    };
-    let mut buf_reader = std::io::BufReader::new(file);
+fn get_exif_metadata_from_bytes(bytes: &[u8]) -> Option<Exif> {
+    let mut cursor = Cursor::new(bytes);
     let exif_reader = exif::Reader::new();
-    exif_reader.read_from_container(&mut buf_reader).ok()
+    exif_reader.read_from_container(&mut cursor).ok()
 }
 
-fn get_xmp_metadata(file: &Path) -> Option<XmpMeta> {
+fn get_xmp_metadata_from_bytes(bytes: &[u8]) -> Option<XmpMeta> {
     let mut xmp_file = xmpkit::XmpFile::new();
     xmp_file
-        .open(file)
+        .from_bytes(bytes)
         .ok()
         .and_then(|_| xmp_file.get_xmp())
         .cloned()
 }
 
-fn get_dimensions(file: &Path) -> Result<(u32, u32), TilerError> {
-    Ok(image::image_dimensions(file)?)
+fn get_dimensions_from_bytes(bytes: &[u8]) -> Result<(u32, u32), TilerError> {
+    let reader = image::ImageReader::new(Cursor::new(bytes)).with_guessed_format()?;
+    Ok(reader.into_dimensions()?)
 }
 
+/// Guesses the panorama angles from a file, reading it into a single buffer once to optimize disk I/O.
 pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
-    //  Extract metadata
-    let xmp_metadata = get_xmp_metadata(file);
+    let bytes = std::fs::read(file)?;
+    guess_pano_angles_from_bytes(&bytes)
+}
+
+/// Guesses the panorama angles from raw image file bytes.
+pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerError> {
+    // Extract metadata
+    let xmp_metadata = get_xmp_metadata_from_bytes(bytes);
 
     // Query Google Photo Sphere (GPano) values
     let north_offset = if let Some(meta) = &xmp_metadata {
@@ -83,8 +88,8 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
     let mut vaov = None;
     let mut projection = Projection::Equirectangular;
 
-    // 6. Cylindrical Sweep detection via focal length EXIF tags
-    let exif_metadata = get_exif_metadata(file);
+    // Cylindrical Sweep detection via focal length EXIF tags
+    let exif_metadata = get_exif_metadata_from_bytes(bytes);
     let mut focal_length_35mm = None;
 
     if let Some(exif) = &exif_metadata
@@ -96,7 +101,7 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
         };
     }
 
-    let (width, height) = get_dimensions(file)?;
+    let (width, height) = get_dimensions_from_bytes(bytes)?;
     if let Some(focal) = focal_length_35mm
         && focal > 0.0
     {
@@ -108,7 +113,7 @@ pub fn guess_pano_angles(file: &Path) -> Result<PanoAngles, TilerError> {
         }
     }
 
-    // 7. Fallback heuristics for un-tagged panoramic images
+    // Fallback heuristics for un-tagged panoramic images
     let aspect_ratio = width as f64 / height as f64;
     if haov.is_none() && vaov.is_none() {
         if (aspect_ratio - 2.0).abs() <= 0.1 {

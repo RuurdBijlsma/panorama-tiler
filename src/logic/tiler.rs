@@ -48,11 +48,17 @@ fn is_region_empty(
     height: u32,
     bg_color: Rgb<u8>,
 ) -> bool {
+    let stride = img.width() as usize * 3;
+    let raw = img.as_raw();
+    let bg_slice = bg_color.0; // [u8; 3]
+
     for y in upper..(upper + height) {
-        for x in left..(left + width) {
-            if *img.get_pixel(x, y) != bg_color {
-                return false;
-            }
+        let row_start = (y as usize * stride) + (left as usize * 3);
+        let row_end = row_start + (width as usize * 3);
+        let row_slice = &raw[row_start..row_end];
+
+        if row_slice.chunks_exact(3).any(|pixel| pixel != bg_slice) {
+            return false;
         }
     }
     true

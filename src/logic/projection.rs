@@ -30,48 +30,41 @@ pub fn generate_cube_faces(
 
     face_setups
         .into_par_iter()
-        .map(|(letter, yaw, pitch)| {
+        .map(|(letter, _yaw, _pitch)| {
             let mut face_img = RgbImage::new(actual_cube_size, actual_cube_size);
-
-            let cos_p = pitch.cos();
-            let sin_p = pitch.sin();
-            let cos_y = yaw.cos();
-            let sin_y = yaw.sin();
 
             let stride = actual_cube_size as usize * 3;
             let face_pixels: &mut [u8] = &mut face_img;
+
+            // Direct mapping based on cardinal orientations (no general trig matrices needed)
+            let map_coords: fn(f64, f64) -> (f64, f64, f64) = match letter {
+                'f' => |u, v| (u, -v, 1.0),
+                'b' => |u, v| (-u, -v, -1.0),
+                'u' => |u, v| (u, 1.0, v),
+                'd' => |u, v| (u, -1.0, -v),
+                'l' => |u, v| (-1.0, -v, u),
+                'r' => |u, v| (1.0, -v, -u),
+                _ => unreachable!(),
+            };
 
             face_pixels
                 .par_chunks_exact_mut(stride)
                 .enumerate()
                 .for_each(|(row, row_pixels)| {
+                    // Pull loop-invariant vertical coordinate calculation outside the column loop
+                    let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
                     for col in 0..actual_cube_size {
                         let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
-                        let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
 
-                        let x_local = u;
-                        let y_local = -v; // Invert because image rows increase downwards
-                        let z_local = 1.0;
-
-                        // 1. Pitch rotation (around X-axis) using precomputed trig
-                        let x1 = x_local;
-                        let y1 = y_local * cos_p - z_local * sin_p;
-                        let z1 = y_local * sin_p + z_local * cos_p;
-
-                        // 2. Yaw rotation (around Y-axis) using precomputed trig
-                        let x2 = x1 * cos_y + z1 * sin_y;
-                        let y2 = y1;
-                        let z2 = -x1 * sin_y + z1 * cos_y;
+                        let (x2, y2, z2) = map_coords(u, v);
 
                         // Convert to a 3D unit direction ray
                         let length = (x2 * x2 + y2 * y2 + z2 * z2).sqrt();
-                        let x_dir = x2 / length;
-                        let y_dir = y2 / length;
-                        let z_dir = z2 / length;
 
                         // Map the 3D vector back to spherical coordinates (yaw/pitch angles)
-                        let theta = x_dir.atan2(z_dir);
-                        let phi = y_dir.asin();
+                        // Note: theta can be calculated from (x2, z2) without division by length.
+                        let theta = x2.atan2(z2);
+                        let phi = (y2 / length).clamp(-1.0, 1.0).asin();
 
                         let mut is_outside = false;
 
@@ -190,22 +183,28 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
     let x0_i = x0 as i32;
     let y0_i = y0 as i32;
 
-    let get_pixel_helper = |px: i32, py: i32| -> &Rgb<u8> {
-        let py_clamped = py.clamp(0, h as i32 - 1) as u32;
+    // Precalculate clamped Y-coordinates
+    let py0 = y0_i.clamp(0, h as i32 - 1) as u32;
+    let py1 = (y0_i + 1).clamp(0, h as i32 - 1) as u32;
+
+    // Helper to get wrapped X-coordinates
+    let get_x_index = |px: i32| -> Option<u32> {
         if wrap_x {
-            let px_wrapped = px.rem_euclid(w as i32) as u32;
-            img.get_pixel(px_wrapped, py_clamped)
+            Some(px.rem_euclid(w as i32) as u32)
         } else if px < 0 || px >= w as i32 {
-            &bg
+            None
         } else {
-            img.get_pixel(px as u32, py_clamped)
+            Some(px as u32)
         }
     };
 
-    let p00 = get_pixel_helper(x0_i, y0_i);
-    let p10 = get_pixel_helper(x0_i + 1, y0_i);
-    let p01 = get_pixel_helper(x0_i, y0_i + 1);
-    let p11 = get_pixel_helper(x0_i + 1, y0_i + 1);
+    let px0 = get_x_index(x0_i);
+    let px1 = get_x_index(x0_i + 1);
+
+    let p00 = px0.map_or(&bg, |x_idx| img.get_pixel(x_idx, py0));
+    let p10 = px1.map_or(&bg, |x_idx| img.get_pixel(x_idx, py0));
+    let p01 = px0.map_or(&bg, |x_idx| img.get_pixel(x_idx, py1));
+    let p11 = px1.map_or(&bg, |x_idx| img.get_pixel(x_idx, py1));
 
     let w00 = (1.0 - dx) * (1.0 - dy);
     let w10 = dx * (1.0 - dy);
@@ -263,34 +262,48 @@ fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> 
     let wx = get_weights(dx);
     let wy = get_weights(dy);
 
+    // Precalculate wrapped X-coordinates to avoid doing rem_euclid and boundary checks in loops
+    let mut px_mapped = [None; 4];
+    for i in -1..=2 {
+        let px = x0_i + i;
+        px_mapped[(i + 1) as usize] = if wrap_x {
+            Some(px.rem_euclid(w as i32) as u32)
+        } else if px < 0 || px >= w as i32 {
+            None
+        } else {
+            Some(px as u32)
+        };
+    }
+
+    // Precalculate clamped Y-coordinates
+    let mut py_clamped = [0u32; 4];
+    for j in -1..=2 {
+        let py = y0_i + j;
+        py_clamped[(j + 1) as usize] = py.clamp(0, h as i32 - 1) as u32;
+    }
+
     let mut r_sum = 0.0;
     let mut g_sum = 0.0;
     let mut b_sum = 0.0;
 
     for j in -1..=2 {
-        let py = y0_i + j;
         let weight_y = wy[(j + 1) as usize];
         if weight_y == 0.0 {
             continue;
         }
 
-        let py_clamped = py.clamp(0, h as i32 - 1) as u32;
+        let py_c = py_clamped[(j + 1) as usize];
 
         for i in -1..=2 {
-            let px = x0_i + i;
             let weight_x = wx[(i + 1) as usize];
             let weight = weight_x * weight_y;
             if weight == 0.0 {
                 continue;
             }
 
-            let pixel = if wrap_x {
-                let px_wrapped = px.rem_euclid(w as i32) as u32;
-                img.get_pixel(px_wrapped, py_clamped)
-            } else if px < 0 || px >= w as i32 {
-                &bg
-            } else {
-                img.get_pixel(px as u32, py_clamped)
+            let pixel = match px_mapped[(i + 1) as usize] {
+                Some(px_c) => img.get_pixel(px_c, py_c),
+                None => &bg,
             };
 
             r_sum += pixel[0] as f64 * weight;

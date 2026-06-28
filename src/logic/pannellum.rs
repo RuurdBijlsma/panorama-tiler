@@ -21,10 +21,13 @@ pub fn generate_pannellum_config(
     } else {
         None
     };
-    let min_pitch =
-        vaov_opt.map(|v| -v / 2.0 + config.angles.v_offset - config.output.pitch_padding);
-    let max_pitch =
-        vaov_opt.map(|v| v / 2.0 + config.angles.v_offset + config.output.pitch_padding);
+    // Section 2.B: Clamp pitch bounds within Pannellum limits [-90.0, 90.0]
+    let min_pitch = vaov_opt.map(|v| {
+        (-v / 2.0 + config.angles.v_offset - config.output.pitch_padding).clamp(-90.0, 90.0)
+    });
+    let max_pitch = vaov_opt.map(|v| {
+        (v / 2.0 + config.angles.v_offset + config.output.pitch_padding).clamp(-90.0, 90.0)
+    });
     let pitch = vaov_opt.map(|_| config.angles.v_offset);
     let v_offset = vaov_opt.map(|_| config.angles.v_offset);
 
