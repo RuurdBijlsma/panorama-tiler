@@ -1,29 +1,32 @@
-use crate::config::GeneratorConfig;
-use crate::logic::{b83, get_bg_color};
+use crate::config::TilerConfig;
+use crate::logic::{b83};
 use fast_image_resize as fr;
-use image::RgbImage;
+use image::{Rgb, RgbImage};
 use rayon::prelude::*;
 use std::collections::BTreeSet;
+use serde::{Deserialize, Serialize};
 
 /// A representation of an individual generated tile.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TileItem {
     pub level: u32,
     pub face: char,
     pub col: u32,
     pub row: u32,
+    #[serde(skip)]
     pub image: RgbImage,
 }
 
 /// A representation of a fallback cube face tile.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FallbackItem {
     pub face: char,
+    #[serde(skip)]
     pub image: RgbImage,
 }
 
 /// Container holding the raw outputs of the multi-resolution pipeline.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeneratedTiles {
     pub tiles: Vec<TileItem>,
     pub fallback_tiles: Vec<FallbackItem>,
@@ -46,7 +49,7 @@ fn is_region_empty(
     upper: u32,
     width: u32,
     height: u32,
-    bg_color: image::Rgb<u8>,
+    bg_color: Rgb<u8>,
 ) -> bool {
     for y in upper..(upper + height) {
         for x in left..(left + width) {
@@ -61,12 +64,13 @@ fn is_region_empty(
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
-    config: &GeneratorConfig,
+    config: &TilerConfig,
+    clamped_tile_size: u32,
     actual_cube_size: u32,
 ) -> GeneratedTiles {
-    let tile_size = config.tile_size.min(actual_cube_size);
+    let tile_size = clamped_tile_size.min(actual_cube_size);
     let face_letters = ['f', 'b', 'u', 'd', 'l', 'r'];
-    let bg_color = get_bg_color(config);
+    let bg_color = Rgb(config.output.background_color);
 
     let levels = {
         let ratio = (actual_cube_size as f64) / (tile_size as f64);
@@ -84,7 +88,7 @@ pub fn generate_pyramid(
         current_size /= 2;
     }
 
-    let is_partial = config.partial_config.haov < 360.0 || config.partial_config.vaov < 180.0;
+    let is_partial = config.angles.haov < 360.0 || config.angles.vaov < 180.0;
 
     // Generate pyramids across all faces in parallel
     let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) = faces
@@ -211,13 +215,14 @@ pub fn generate_pyramid(
 
     // Generate fallback files if fallback size is defined
     let mut fallback_tiles = Vec::new();
-    if config.fallback_size > 0 {
+    if config.output.fallback_size > 0 {
         let mut resizer = fr::Resizer::new();
         let resize_options = fr::ResizeOptions::new()
             .resize_alg(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3));
 
         for &(letter, ref full_face) in faces {
-            let mut resized = RgbImage::new(config.fallback_size, config.fallback_size);
+            let mut resized =
+                RgbImage::new(config.output.fallback_size, config.output.fallback_size);
             resizer
                 .resize(full_face, &mut resized, Some(&resize_options))
                 .expect("Failed to resize fallback face");

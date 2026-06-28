@@ -1,8 +1,8 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
+use pano_tiler::exif::calc_cylindrical_pano_angles;
 use pano_tiler::{
-    GeneratorConfig, PartialPanoConfig, Projection, b83, calculate_pano_angles,
-    generate_cube_faces, generate_pyramid,
+    OutputConfig, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces, generate_pyramid,
 };
 use std::hint::black_box;
 use std::time::Duration;
@@ -29,9 +29,9 @@ fn bench_base83(c: &mut Criterion) {
 }
 
 fn bench_pano_angles(c: &mut Criterion) {
-    c.bench_function("calculate_pano_angles", |b| {
+    c.bench_function("calc_cylindrical_pano_angles", |b| {
         b.iter(|| {
-            calculate_pano_angles(
+            calc_cylindrical_pano_angles(
                 black_box(24.0),
                 black_box(6000),
                 black_box(3000),
@@ -47,14 +47,15 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     let src_image = generate_synthetic_pano(1024, 512);
 
     // Full Equirectangular
-    let config_full = GeneratorConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig::default(),
-        output_format: Default::default(),
-        tile_size: 256,
-        fallback_size: 0,
-        cube_size: 256,
-        ..Default::default()
+    let config_full = TilerConfig {
+        output: OutputConfig {
+            format: Default::default(),
+            tile_size: 256,
+            fallback_size: 0,
+            cube_size: 256,
+            ..Default::default()
+        },
+        angles: PanoAngles::default(),
     };
     group.bench_function("generate_cube_faces_equirect_full", |b| {
         b.iter(|| {
@@ -67,18 +68,20 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     });
 
     // 2. Partial Cylindrical
-    let config_partial_cyl = GeneratorConfig {
-        projection: Projection::Cylindrical,
-        partial_config: PartialPanoConfig {
+    let config_partial_cyl = TilerConfig {
+        output: OutputConfig {
+            tile_size: 256,
+            fallback_size: 0,
+            cube_size: 256,
+            auto_load: false,
+            ..Default::default()
+        },
+        angles: PanoAngles {
+            projection: Projection::Cylindrical,
             haov: 180.0,
             vaov: 90.0,
             ..Default::default()
         },
-        tile_size: 256,
-        fallback_size: 0,
-        cube_size: 256,
-        auto_load: false,
-        ..Default::default()
     };
     group.bench_function("generate_cube_faces_cylindrical_partial", |b| {
         b.iter(|| {
@@ -99,13 +102,14 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
     let src_image = generate_synthetic_pano(512, 256);
 
     // Full configuration
-    let config_full = GeneratorConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig::default(),
-        tile_size: 256,
-        fallback_size: 512,
-        cube_size: 256,
-        ..Default::default()
+    let config_full = TilerConfig {
+        output: OutputConfig {
+            tile_size: 256,
+            fallback_size: 512,
+            cube_size: 256,
+            ..Default::default()
+        },
+        angles: PanoAngles::default(),
     };
     let faces_full = generate_cube_faces(&src_image, &config_full, 256);
 
@@ -115,22 +119,25 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
                 black_box(&faces_full),
                 black_box(&config_full),
                 black_box(256),
+                black_box(256),
             )
         })
     });
 
     // Partial configuration (forces background-check iteration and missing-tiles formatting)
-    let config_partial = GeneratorConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig {
+    let config_partial = TilerConfig {
+        angles: PanoAngles {
+            projection: Projection::Equirectangular,
             haov: 120.0,
             vaov: 60.0,
             ..Default::default()
         },
-        tile_size: 256,
-        fallback_size: 512,
-        cube_size: 256,
-        ..Default::default()
+        output: OutputConfig {
+            tile_size: 256,
+            fallback_size: 512,
+            cube_size: 256,
+            ..Default::default()
+        },
     };
     let faces_partial = generate_cube_faces(&src_image, &config_partial, 256);
 
@@ -139,6 +146,7 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
             generate_pyramid(
                 black_box(&faces_partial),
                 black_box(&config_partial),
+                black_box(256),
                 black_box(256),
             )
         })
@@ -154,13 +162,14 @@ fn bench_full_integration(c: &mut Criterion) {
     group.warm_up_time(Duration::from_secs(5));
 
     let src_image = generate_synthetic_pano(4000, 2000);
-    let config = GeneratorConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig::default(),
-        tile_size: 512,
-        fallback_size: 1024,
-        cube_size: 0,
-        ..Default::default()
+    let config = TilerConfig {
+        angles: PanoAngles::default(),
+        output: OutputConfig {
+            tile_size: 512,
+            fallback_size: 1024,
+            cube_size: 0,
+            ..Default::default()
+        }
     };
 
     group.bench_function("process_panorama_4k", |b| {

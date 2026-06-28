@@ -1,5 +1,7 @@
-use criterion::{Criterion, criterion_group, criterion_main};
-use pano_tiler::{GeneratorConfig, PartialPanoConfig, Projection, process_panorama, save_to_disk};
+use criterion::{criterion_group, criterion_main, Criterion};
+use pano_tiler::{
+    process_panorama, save_to_disk, OutputConfig, PanoAngles, TilerConfig,
+};
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
@@ -17,13 +19,14 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
     let output_dir = Path::new("target/bench_end_to_end_out");
 
     // Default configuration matching the Python script's defaults
-    let config = GeneratorConfig {
-        projection: Projection::Equirectangular,
-        partial_config: PartialPanoConfig::default(),
-        tile_size: 512,
-        fallback_size: 1024,
-        cube_size: 0,
-        ..Default::default()
+    let config = TilerConfig {
+        angles: PanoAngles::default(),
+        output: OutputConfig {
+            tile_size: 512,
+            fallback_size: 1024,
+            cube_size: 0,
+            ..Default::default()
+        },
     };
 
     group.bench_function("rust_native_pipeline", |b| {
@@ -38,16 +41,15 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
             let rgb_img = dynamic_img.to_rgb8();
 
             // 3. Process the panorama natively (calculating angles, cubemaps, and tile structures)
-            let (tiles, config_json, _actual_cube_size) = process_panorama(&rgb_img, &config)
+            let pano_output = process_panorama(&rgb_img, &config)
                 .expect("Failed to process panorama in the tiler pipeline");
 
             // 4. Save tiles, fallback images, and config.json to disk
             save_to_disk(
-                &tiles,
-                &config_json,
+                &pano_output,
                 output_dir,
-                config.output_format,
-                config.quality,
+                config.output.format,
+                config.output.quality,
             )
             .expect("Failed to save tiles to disk");
         })

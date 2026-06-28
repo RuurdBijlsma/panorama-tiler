@@ -1,6 +1,7 @@
+use pano_tiler::exif::calc_cylindrical_pano_angles;
 use pano_tiler::{
-    GeneratorConfig, PartialPanoConfig, Projection, calculate_pano_angles, process_panorama,
-    save_to_disk,
+    process_panorama, save_to_disk, PanoAngles,
+    TilerConfig,
 };
 use std::path::Path;
 
@@ -19,25 +20,19 @@ fn test_generate_multires_panorama() {
     let focal_length_35mm_eq = 24.0;
     let crop_factor = 0.9; // Pano stitch crop factor
 
-    let angles = calculate_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
-    let config = GeneratorConfig {
-        projection: Projection::Cylindrical,
-        partial_config: PartialPanoConfig {
+    let angles = calc_cylindrical_pano_angles(focal_length_35mm_eq, width, height, crop_factor).unwrap();
+    let config = TilerConfig {
+        angles: PanoAngles {
             haov: angles.haov,
             vaov: angles.vaov,
             ..Default::default()
         },
-        avoid_showing_background: true,
         ..Default::default()
     };
 
     // Process the panorama
-    let (tiles, config_json, actual_cube_size) = process_panorama(&rgb_img, &config)
+    let pano_output = process_panorama(&rgb_img, &config)
         .expect("Failed to process panorama in the tiler pipeline");
-
-    println!("Detected cube face resolution: {}", actual_cube_size);
-    println!("Total zoom level hierarchy: {}", tiles.levels);
-    println!("Total tiles generated: {}", tiles.tiles.len());
 
     // Save to disk
     let output_dir = Path::new("target/pano_output");
@@ -45,11 +40,10 @@ fn test_generate_multires_panorama() {
         std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
     }
     save_to_disk(
-        &tiles,
-        &config_json,
+        &pano_output,
         output_dir,
-        config.output_format,
-        config.quality,
+        config.output.format,
+        config.output.quality,
     )
     .expect("Failed to save tiles and configuration json to target test folder");
 

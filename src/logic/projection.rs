@@ -1,5 +1,4 @@
-use crate::config::{GeneratorConfig, InterpolationMode, Projection};
-use crate::logic::get_bg_color;
+use crate::config::{InterpolationMode, Projection, TilerConfig};
 use image::{Rgb, RgbImage};
 use rayon::prelude::*;
 use std::f64::consts::{FRAC_PI_2, PI};
@@ -7,17 +6,17 @@ use std::f64::consts::{FRAC_PI_2, PI};
 /// Generates the 6 cubemap face images from an equirectangular or cylindrical input image.
 pub fn generate_cube_faces(
     src_image: &RgbImage,
-    config: &GeneratorConfig,
-    actual_cube_size: u32,
+    config: &TilerConfig,
+    actual_cube_size:u32,
 ) -> Vec<(char, RgbImage)> {
     let (src_width, src_height) = src_image.dimensions();
-    let haov_rad = config.partial_config.haov.to_radians();
-    let vaov_rad = config.partial_config.vaov.to_radians();
-    let v_offset_rad = config.partial_config.v_offset.to_radians();
-    let interp_mode = config.interpolation_mode;
+    let haov_rad = config.angles.haov.to_radians();
+    let vaov_rad = config.angles.vaov.to_radians();
+    let v_offset_rad = config.angles.v_offset.to_radians();
+    let interp_mode = config.output.interpolation_mode;
 
     // Convert normalized [0.0, 1.0] colors to Rgb<u8>
-    let bg_color = get_bg_color(config);
+    let bg_color = Rgb(config.output.background_color);
 
     // Hugin standard camera orientation mapping
     let face_setups = vec![
@@ -77,7 +76,7 @@ pub fn generate_cube_faces(
                         let mut is_outside = false;
 
                         // Horizontal projection mapping
-                        let src_x = if config.partial_config.haov >= 360.0 {
+                        let src_x = if config.angles.haov >= 360.0 {
                             let normalized_theta = (theta + PI) / (2.0 * PI);
                             normalized_theta * (src_width as f64)
                         } else {
@@ -93,7 +92,7 @@ pub fn generate_cube_faces(
 
                         // Vertical projection mapping using angular offsets
                         let src_y = if !is_outside {
-                            match config.projection {
+                            match config.angles.projection {
                                 Projection::Cylindrical => {
                                     let half_vaov = vaov_rad / 2.0;
                                     let max_y_cyl = half_vaov.tan();
@@ -110,7 +109,7 @@ pub fn generate_cube_faces(
                                     }
                                 }
                                 Projection::Equirectangular => {
-                                    if config.partial_config.vaov >= 180.0 {
+                                    if config.angles.vaov >= 180.0 {
                                         let normalized_phi = (FRAC_PI_2 - phi) / PI;
                                         normalized_phi * (src_height as f64)
                                     } else {
@@ -142,14 +141,14 @@ pub fn generate_cube_faces(
                                     src_image,
                                     src_x,
                                     src_y,
-                                    config.partial_config.haov >= 360.0,
+                                    config.angles.haov >= 360.0,
                                     bg_color,
                                 ),
                                 InterpolationMode::Bilinear => sample_bilinear(
                                     src_image,
                                     src_x,
                                     src_y,
-                                    config.partial_config.haov >= 360.0,
+                                    config.angles.haov >= 360.0,
                                     bg_color,
                                 ),
                             }

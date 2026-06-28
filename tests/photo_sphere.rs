@@ -1,4 +1,4 @@
-use pano_tiler::{GeneratorConfig, OutputFormat, process_panorama, save_to_disk};
+use pano_tiler::{OutputConfig, OutputFormat, TilerConfig, process_panorama, save_to_disk};
 use std::path::Path;
 
 #[test]
@@ -33,41 +33,38 @@ fn generate_pano(image_path: &Path, output_format: OutputFormat, quality: u8) {
     let rgb_img = dynamic_img.to_rgb8();
 
     // Define custom options (Defaults here model a full 360 panorama)
-    let config = GeneratorConfig {
-        output_format,
-        quality,
+    let config = TilerConfig {
+        output: OutputConfig {
+            format: output_format,
+            quality,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
     // Process the panorama
-    let (tiles, config_json, actual_cube_size) = process_panorama(&rgb_img, &config)
+    let pano_output = process_panorama(&rgb_img, &config)
         .expect("Failed to process panorama in the tiler pipeline");
-
-    println!("Detected cube face resolution: {}", actual_cube_size);
-    println!("Total zoom level hierarchy: {}", tiles.levels);
-    println!("Total tiles generated: {}", tiles.tiles.len());
 
     // Save to disk
     let out_path = format!(
         "target/sphere_output_{}_q{}_{}",
-        config.output_format.to_extension(),
-        config.quality,
+        config.output.format.to_extension(),
+        config.output.quality,
         image_path
             .file_name()
             .unwrap()
-            .to_string_lossy()
-            .to_string(),
+            .to_string_lossy(),
     );
     let output_dir = Path::new(&out_path);
     if output_dir.exists() {
         std::fs::remove_dir_all(output_dir).expect("Failed to remove test output directory");
     }
     save_to_disk(
-        &tiles,
-        &config_json,
+        &pano_output,
         output_dir,
-        config.output_format,
-        config.quality,
+        config.output.format,
+        config.output.quality,
     )
     .expect("Failed to save tiles and configuration json to target test folder");
 
