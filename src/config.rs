@@ -7,6 +7,16 @@ pub enum Projection {
     Cylindrical,
 }
 
+/// Output image formats supported by the tiler.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputFormat {
+    #[default]
+    Jpeg,
+    Png,
+    Webp,
+}
+
 /// Parameters for partial panorama mapping configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialPanoConfig {
@@ -46,7 +56,7 @@ pub struct TilerConfig {
     pub fallback_size: u32,
     pub cube_size: u32,
     pub auto_load: bool,
-    pub png_output: bool,
+    pub output_format: OutputFormat,
     pub quality: u8,
 }
 
@@ -59,7 +69,7 @@ impl Default for TilerConfig {
             fallback_size: 1024,
             cube_size: 0, // 0 defaults to retaining full detail automatically
             auto_load: false,
-            png_output: false,
+            output_format: OutputFormat::default(),
             quality: 75,
         }
     }

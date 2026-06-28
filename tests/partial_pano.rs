@@ -1,7 +1,4 @@
-use pano_tiler::{
-    PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles, process_panorama,
-    save_to_disk,
-};
+use pano_tiler::{PartialPanoConfig, Projection, TilerConfig, calculate_pano_angles, process_panorama, save_to_disk, OutputFormat};
 use std::path::Path;
 
 #[test]
@@ -34,7 +31,7 @@ fn test_generate_multires_panorama() {
         fallback_size: 1024,
         cube_size: 0,
         auto_load: true,
-        png_output: false,
+        output_format: OutputFormat::Jpeg,
         quality: 75,
     };
 
@@ -55,7 +52,7 @@ fn test_generate_multires_panorama() {
         &tiles,
         &config_json,
         output_dir,
-        config.png_output,
+        config.output_format,
         config.quality,
     )
     .expect("Failed to save tiles and configuration json to target test folder");

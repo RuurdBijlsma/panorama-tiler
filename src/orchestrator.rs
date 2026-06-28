@@ -1,5 +1,5 @@
 use crate::{
-    GeneratedTiles, PannellumConfig, Projection, TilerConfig, TilerError, config, projection, tiler,
+    GeneratedTiles, PannellumConfig, Projection, TilerConfig, TilerError, OutputFormat, config, projection, tiler,
 };
 use image::RgbImage;
 use image::codecs::jpeg::JpegEncoder;
@@ -22,7 +22,7 @@ pub fn process_panorama(
             haov = 360.0;
         } else {
             return Err(TilerError::InvalidConfig(
-                "Unless given a `hoav` config, equirectangular input image must be a full (not partial) panorama!".to_string()
+                "Unless given a `haov` config, equirectangular input image must be a full (not partial) panorama!".to_string()
             ));
         }
     }
@@ -88,10 +88,11 @@ pub fn process_panorama(
         };
 
     let auto_load = if config.auto_load { Some(true) } else { None };
-    let extension = if config.png_output {
-        "png".to_string()
-    } else {
-        "jpg".to_string()
+
+    let extension = match config.output_format {
+        OutputFormat::Jpeg => "jpg".to_string(),
+        OutputFormat::Png => "png".to_string(),
+        OutputFormat::Webp => "webp".to_string(),
     };
 
     let multires = config::MultiResConfig {
@@ -136,20 +137,25 @@ pub fn save_to_disk(
     generated: &GeneratedTiles,
     config_json: &PannellumConfig,
     output_dir: &Path,
-    png_output: bool,
+    output_format: OutputFormat,
     quality: u8,
 ) -> Result<(), TilerError> {
     fs::create_dir_all(output_dir)?;
+
+    let ext = match output_format {
+        OutputFormat::Jpeg => "jpg",
+        OutputFormat::Png => "png",
+        OutputFormat::Webp => "webp",
+    };
 
     // 1. Save standard multires tiles
     for tile in &generated.tiles {
         let level_dir = output_dir.join(tile.level.to_string());
         fs::create_dir_all(&level_dir)?;
 
-        let ext = if png_output { "png" } else { "jpg" };
         let filename = format!("{}{}_{}.{}", tile.face, tile.row, tile.col, ext);
         let filepath = level_dir.join(filename);
-        save_image(&tile.image, &filepath, png_output, quality)?;
+        save_image(&tile.image, &filepath, output_format, quality)?;
     }
 
     // 2. Save fallback tiles
@@ -157,11 +163,10 @@ pub fn save_to_disk(
         let fallback_dir = output_dir.join("fallback");
         fs::create_dir_all(&fallback_dir)?;
 
-        let ext = if png_output { "png" } else { "jpg" };
         for fallback in &generated.fallback_tiles {
             let filename = format!("{}.{}", fallback.face, ext);
             let filepath = fallback_dir.join(filename);
-            save_image(&fallback.image, &filepath, png_output, quality)?;
+            save_image(&fallback.image, &filepath, output_format, quality)?;
         }
     }
 
@@ -176,16 +181,25 @@ pub fn save_to_disk(
 fn save_image(
     image: &RgbImage,
     filepath: &Path,
-    png_output: bool,
+    output_format: OutputFormat,
     quality: u8,
 ) -> Result<(), TilerError> {
-    if png_output {
-        image.save(&filepath)?;
-    } else {
-        let file = File::create(&filepath)?;
-        let ref mut writer = BufWriter::new(file);
-        let mut encoder = JpegEncoder::new_with_quality(writer, quality);
-        encoder.encode_image(image)?;
+    match output_format {
+        OutputFormat::Png => {
+            image.save(filepath)?;
+        }
+        OutputFormat::Jpeg => {
+            let file = File::create(filepath)?;
+            let mut writer = BufWriter::new(file);
+            let mut encoder = JpegEncoder::new_with_quality(&mut writer, quality);
+            encoder.encode_image(image)?;
+        }
+        OutputFormat::Webp => {
+            let (width, height) = image.dimensions();
+            let encoder = webp::Encoder::from_rgb(image.as_raw(), width, height);
+            let encoded_webp = encoder.encode(quality as f32);
+            fs::write(filepath, &*encoded_webp)?;
+        }
     }
     Ok(())
 }
