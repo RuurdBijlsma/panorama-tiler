@@ -9,7 +9,10 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
 use panorama_tiler::exif::calc_cylindrical_pano_angles;
-use panorama_tiler::{OutputConfig, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces, generate_pyramid, OutputFormat};
+use panorama_tiler::{
+    OutputConfig, OutputFormat, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces,
+    generate_pyramid,
+};
 use std::hint::black_box;
 use std::time::Duration;
 

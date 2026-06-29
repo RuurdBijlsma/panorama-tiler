@@ -121,18 +121,16 @@ pub fn generate_pyramid(
                         DownscalingMethod::Recursive => {
                             let mut downscaled = RgbImage::new(size, size);
                             let source = recursive_face.as_ref().unwrap_or(full_face);
-                            resizer
-                                .resize(source, &mut downscaled, Some(&resize_options))?;
+                            resizer.resize(source, &mut downscaled, Some(&resize_options))?;
                             recursive_face.insert(downscaled)
                         }
                         DownscalingMethod::Direct => {
                             current_face_allocated = RgbImage::new(size, size);
-                            resizer
-                                .resize(
-                                    full_face,
-                                    &mut current_face_allocated,
-                                    Some(&resize_options),
-                                )?;
+                            resizer.resize(
+                                full_face,
+                                &mut current_face_allocated,
+                                Some(&resize_options),
+                            )?;
                             &current_face_allocated
                         }
                     }
@@ -173,7 +171,8 @@ pub fn generate_pyramid(
             Ok::<_, TilerError>((local_tiles, local_missing))
         })
         .collect::<Result<Vec<_>, TilerError>>();
-    let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) = results?.into_iter().unzip();
+    let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) =
+        results?.into_iter().unzip();
 
     let tiles: Vec<TileItem> = tiles_nested.into_iter().flatten().collect();
     let missing_tiles: Vec<MissingTile> = missing_nested.into_iter().flatten().collect();

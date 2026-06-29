@@ -16,5 +16,5 @@ pub enum TilerError {
     InvalidConfig(String),
 
     #[error("Can't resize image: {0}")]
-    ResizeError(#[from] ResizeError)
+    ResizeError(#[from] ResizeError),
 }

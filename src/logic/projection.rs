@@ -209,8 +209,14 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
         w11,
         f64::from(p01[0]).mul_add(w01, f64::from(p10[0]).mul_add(w10, f64::from(p00[0]) * w00)),
     );
-    let g = f64::from(p11[1]).mul_add(w11, f64::from(p01[1]).mul_add(w01, f64::from(p10[1]).mul_add(w10, f64::from(p00[1]) * w00)));
-    let b = f64::from(p11[2]).mul_add(w11, f64::from(p01[2]).mul_add(w01, f64::from(p10[2]).mul_add(w10, f64::from(p00[2]) * w00)));
+    let g = f64::from(p11[1]).mul_add(
+        w11,
+        f64::from(p01[1]).mul_add(w01, f64::from(p10[1]).mul_add(w10, f64::from(p00[1]) * w00)),
+    );
+    let b = f64::from(p11[2]).mul_add(
+        w11,
+        f64::from(p01[2]).mul_add(w01, f64::from(p10[2]).mul_add(w10, f64::from(p00[2]) * w00)),
+    );
 
     Rgb([
         r.round().clamp(0.0, 255.0) as u8,
