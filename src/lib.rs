@@ -1,4 +1,10 @@
-#![allow(clippy::missing_errors_doc)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 //! A library to generate multi-resolution cubemap tiles and Pannellum-compatible configurations
 //! from equirectangular or cylindrical panoramas.
