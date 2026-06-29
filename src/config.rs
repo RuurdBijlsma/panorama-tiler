@@ -20,12 +20,13 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
-    pub fn to_extension(&self) -> &'static str {
+    #[must_use]
+    pub const fn to_extension(&self) -> &'static str {
         match self {
-            OutputFormat::Jpeg => "jpg",
-            OutputFormat::Png => "png",
+            Self::Jpeg => "jpg",
+            Self::Png => "png",
             #[cfg(feature = "webp")]
-            OutputFormat::Webp => "webp",
+            Self::Webp => "webp",
         }
     }
 }
@@ -145,7 +146,7 @@ pub struct PannellumConfig {
     pub multi_res: MultiResConfig,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MultiResConfig {
     #[serde(skip_serializing_if = "Option::is_none")]

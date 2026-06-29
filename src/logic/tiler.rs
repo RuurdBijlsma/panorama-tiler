@@ -65,6 +65,7 @@ fn is_region_empty(
 }
 
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
+#[must_use]
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
     config: &TilerConfig,
@@ -76,7 +77,7 @@ pub fn generate_pyramid(
     let bg_color = Rgb(config.output.background_color);
 
     let levels = {
-        let ratio = (actual_cube_size as f64) / (tile_size as f64);
+        let ratio = f64::from(actual_cube_size) / f64::from(tile_size);
         let mut l = (ratio.log2().ceil() as u32) + 1;
         if l >= 2 && actual_cube_size / 2u32.pow(l - 2) == tile_size {
             l -= 1; // Edge case matching Python script adjustments
@@ -109,7 +110,7 @@ pub fn generate_pyramid(
 
             for level in (1..=levels).rev() {
                 let size = level_sizes[level as usize];
-                let num_tiles_wide_high = ((size as f64) / (tile_size as f64)).ceil() as u32;
+                let num_tiles_wide_high = (f64::from(size) / f64::from(tile_size)).ceil() as u32;
                 let mut current_face_allocated;
 
                 let active_face: &RgbImage = if level == levels {
@@ -179,7 +180,9 @@ pub fn generate_pyramid(
     let missing_tiles: Vec<MissingTile> = missing_nested.into_iter().flatten().collect();
 
     // Process missing tiles string
-    let missing_tiles_str = if !missing_tiles.is_empty() {
+    let missing_tiles_str = if missing_tiles.is_empty() {
+        None
+    } else {
         let mut missing_set: BTreeSet<MissingTile> = missing_tiles.into_iter().collect();
 
         // Strip children of missing parents to save space
@@ -219,16 +222,14 @@ pub fn generate_pyramid(
                 missing_str.push('>');
                 missing_str.push_str(&b83::encode(&[mt.level], 1));
                 let level_size = level_sizes[mt.level as usize];
-                let max_tile_num = ((level_size as f64) / (tile_size as f64)).ceil() as u32 - 1;
-                num_tile_digits = (((max_tile_num + 1) as f64).log(83.0).ceil() as usize).max(1);
+                let max_tile_num = (f64::from(level_size) / f64::from(tile_size)).ceil() as u32 - 1;
+                num_tile_digits = (f64::from(max_tile_num + 1).log(83.0).ceil() as usize).max(1);
             }
             missing_str.push_str(&b83::encode(&[mt.col, mt.row], num_tile_digits));
             prev_face = Some(mt.face_idx);
             prev_level = Some(mt.level);
         }
         Some(missing_str)
-    } else {
-        None
     };
 
     // Generate fallback files if fallback size is defined

@@ -16,7 +16,7 @@ fn get_xmp_metadata(bytes: &[u8]) -> Option<XmpMeta> {
     xmp_file
         .from_bytes(bytes)
         .ok()
-        .and_then(|_| xmp_file.get_xmp())
+        .and_then(|()| xmp_file.get_xmp())
         .cloned()
 }
 
@@ -90,16 +90,17 @@ pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerErr
 
     // Cylindrical Sweep detection via focal length EXIF tags
     let exif_metadata = get_exif_metadata(bytes);
-    let mut focal_length_35mm = None;
 
-    if let Some(exif) = &exif_metadata
+    let focal_length_35mm = if let Some(exif) = &exif_metadata
         && let Some(field) = exif.get_field(exif::Tag::FocalLengthIn35mmFilm, exif::In::PRIMARY)
     {
-        focal_length_35mm = match &field.value {
-            exif::Value::Rational(rationals) => rationals.first().map(|r| r.to_f64()),
-            _ => field.value.get_uint(0).map(|v| v as f64),
-        };
-    }
+        match &field.value {
+            exif::Value::Rational(rationals) => rationals.first().map(exif::Rational::to_f64),
+            _ => field.value.get_uint(0).map(f64::from),
+        }
+    } else {
+        None
+    };
 
     let (width, height) = get_dimensions(bytes)?;
     if let Some(focal) = focal_length_35mm
@@ -114,7 +115,7 @@ pub fn guess_pano_angles_from_bytes(bytes: &[u8]) -> Result<PanoAngles, TilerErr
     }
 
     // Fallback heuristics for un-tagged panoramic images
-    let aspect_ratio = width as f64 / height as f64;
+    let aspect_ratio = f64::from(width) / f64::from(height);
     if haov.is_none() && vaov.is_none() {
         if (aspect_ratio - 2.0).abs() <= 0.1 {
             // Equirectangular Full Photo Sphere

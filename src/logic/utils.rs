@@ -26,7 +26,7 @@ pub fn save_image(
         OutputFormat::Webp => {
             let (width, height) = image.dimensions();
             let encoder = webp::Encoder::from_rgb(image.as_raw(), width, height);
-            let encoded_webp = encoder.encode(quality as f32);
+            let encoded_webp = encoder.encode(f32::from(quality));
             fs::write(filepath, &*encoded_webp)?;
         }
     }

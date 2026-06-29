@@ -18,7 +18,7 @@ pub struct TiledPanoramaOutput {
     pub actual_cube_size: u32,
 }
 
-/// Process an RgbImage into Pannellum tiles and config.
+/// Process an `RgbImage` into Pannellum tiles and config.
 pub fn process_panorama(
     src_image: &RgbImage,
     config: &TilerConfig,
@@ -51,7 +51,7 @@ pub fn process_panorama(
         config.output.cube_size
     } else {
         let ratio = 360.0 / config.angles.haov;
-        let computed = ratio * (width as f64) / std::f64::consts::PI;
+        let computed = ratio * f64::from(width) / std::f64::consts::PI;
         8 * ((computed / 8.0) as u32)
     };
     let clamped_tile_size = config.output.tile_size.min(actual_cube_size);

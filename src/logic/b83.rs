@@ -4,6 +4,7 @@ const B83_CHARS: &[u8] =
 
 /// Encodes an array of unsigned 32-bit integers into a Base83 representation.
 /// Pad length specifies the character allocation per integer value.
+#[must_use]
 pub fn encode(vals: &[u32], length: usize) -> String {
     let mut result = String::with_capacity(vals.len() * length);
     for &val in vals {

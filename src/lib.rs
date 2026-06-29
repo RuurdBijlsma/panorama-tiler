@@ -1,4 +1,6 @@
-//! A library to generate multi-resolution cubemap tiles and Pannellum-compatible configurations 
+#![allow(clippy::missing_errors_doc)]
+
+//! A library to generate multi-resolution cubemap tiles and Pannellum-compatible configurations
 //! from equirectangular or cylindrical panoramas.
 //!
 //! # Overview
@@ -14,7 +16,7 @@
 //! # Examples
 //!
 //! ### Automatic Metadata Processing
-//! If the source panorama contains valid EXIF or GPano XMP tags, you can process the image with 
+//! If the source panorama contains valid EXIF or `GPano` XMP tags, you can process the image with
 //! automatic angle extraction:
 //!
 //! ```rust,no_run

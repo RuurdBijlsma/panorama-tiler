@@ -1,5 +1,6 @@
 use crate::{GeneratedTiles, PannellumConfig, TilerConfig, config};
 
+#[must_use]
 pub fn generate_pannellum_config(
     config: &TilerConfig,
     generated_tiles: &GeneratedTiles,
@@ -25,17 +26,17 @@ pub fn generate_pannellum_config(
         vaov_opt.map(|v| v / 2.0 + config.angles.v_offset + config.output.pitch_padding);
     let v_offset = vaov_opt.map(|_| config.angles.v_offset);
 
-    let background_color = if config.output.background_color != [0, 0, 0] {
+    let background_color = if config.output.background_color == [0, 0, 0] {
+        None
+    } else {
         Some(
             config
                 .output
                 .background_color
                 .iter()
-                .map(|&c| c as f64 / 255.0)
+                .map(|&c| f64::from(c) / 255.0)
                 .collect(),
         )
-    } else {
-        None
     };
 
     let multires = config::MultiResConfig {
