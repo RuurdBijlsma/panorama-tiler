@@ -5,6 +5,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 
 /// Generates the 6 cubemap face images from an equirectangular or cylindrical input image.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn generate_cube_faces(
     src_image: &RgbImage,
     config: &TilerConfig,

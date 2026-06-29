@@ -1,3 +1,4 @@
+#![deny(clippy::unwrap_used)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::cast_precision_loss,

@@ -66,6 +66,7 @@ fn is_region_empty(
 }
 
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
+#[allow(clippy::too_many_lines)]
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
     config: &TilerConfig,
