@@ -14,7 +14,7 @@
     * ✅ orchestrator.rs is too large and badly named
     * ✅ clear up if focal length based extraction is cylindrical only, if so name the file/function properly
     * ✅ add function to gen pano and save to disc in 1
-* gate exif extractor (xmpkit & exif) behind cargo feature
-* check voor panic possibilities
+* ✅ check voor panic possibilities
+* ✅ gate exif extractor (xmpkit & exif) behind cargo feature
+* ✅ what do i do with "view-layer" fields like "compass" to the pannellum config. (they are set in frontend)
 * write readme
-* what do i do with "view-layer" fields like "compass" to the pannellum config.

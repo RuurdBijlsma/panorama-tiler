@@ -73,7 +73,6 @@ fn bench_cube_face_generation(c: &mut Criterion) {
             tile_size: 256,
             fallback_size: 0,
             cube_size: 256,
-            auto_load: false,
             ..Default::default()
         },
         angles: PanoAngles {

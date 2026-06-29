@@ -25,6 +25,12 @@ pub fn process_panorama(
 ) -> Result<TiledPanoramaOutput, TilerError> {
     let (width, _) = src_image.dimensions();
 
+    if !config.angles.v_offset.is_finite() {
+        return Err(TilerError::InvalidConfig(
+            "The vertical offset `v_offset` must be a finite number".to_owned(),
+        ));
+    }
+
     if !config.angles.haov.is_finite()
         || !config.angles.vaov.is_finite()
         || config.angles.haov <= 0.0
@@ -32,6 +38,11 @@ pub fn process_panorama(
     {
         return Err(TilerError::InvalidConfig(
             "Both `haov` and `vaov` must be positive, finite numbers".to_owned(),
+        ));
+    }
+    if config.output.tile_size == 0 {
+        return Err(TilerError::InvalidConfig(
+            "Output `tile_size` must be greater than 0".to_owned(),
         ));
     }
 
@@ -44,6 +55,12 @@ pub fn process_panorama(
         8 * ((computed / 8.0) as u32)
     };
     let clamped_tile_size = config.output.tile_size.min(actual_cube_size);
+
+    if actual_cube_size == 0 {
+        return Err(TilerError::InvalidConfig(
+            "Resolved cube size must be greater than 0".to_owned(),
+        ));
+    }
 
     // Pipeline: generate cube faces, pyramid and pannellum config
     let faces = generate_cube_faces(src_image, config, actual_cube_size);
