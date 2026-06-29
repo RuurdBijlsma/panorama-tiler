@@ -7,9 +7,10 @@ description = "A tiling and configuration generator to convert equirectangular o
 readme = "README.md"
 repository = "https://github.com/ruurdbijlsma/panorama-tiler"
 homepage = "https://github.com/ruurdbijlsma/panorama-tiler"
+documentation = "https://docs.rs/panorama-tiler"
 license = "MIT OR Apache-2.0"
 keywords = ["panorama", "pannellum", "cubemap", "tiling", "multires"]
-categories = ["multimedia::images", "rendering", "visualization"]
+categories = ["multimedia::images"]
 exclude = ['img']
 
 [dependencies]

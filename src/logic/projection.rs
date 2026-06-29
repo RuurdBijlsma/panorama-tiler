@@ -153,6 +153,7 @@ pub fn generate_cube_faces(
         .collect()
 }
 
+#[allow(clippy::many_single_char_names)]
 fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
     let (w, h) = img.dimensions();
     let w_f = f64::from(w);

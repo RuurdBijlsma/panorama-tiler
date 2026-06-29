@@ -239,13 +239,13 @@ pub fn generate_pyramid(
             .resize_alg(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3));
 
         for &(letter, ref full_face) in faces {
-            let mut resized =
+            let mut resized_face =
                 RgbImage::new(config.output.fallback_size, config.output.fallback_size);
-            resizer.resize(full_face, &mut resized, Some(&resize_options))?;
+            resizer.resize(full_face, &mut resized_face, Some(&resize_options))?;
 
             fallback_tiles.push(FallbackItem {
                 face: letter,
-                image: resized,
+                image: resized_face,
             });
         }
     }
