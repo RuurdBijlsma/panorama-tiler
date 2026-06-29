@@ -22,7 +22,7 @@ cropped/partial panoramas.
   crate does the tiling.
 - **Pyramid Downscaling**: Generates multi-level zoom crops of the panorama that Pannellum loads dynamically.
 - **Fast**: Over 10x faster than Pannellum's `generate.py` for (almost) the same functionality.
-- **No `Hugin`/`nona` dependency** This is a pure rust implemenation, no external dependencies needed.
+- **No `Hugin`/`nona` dependency**: This is a pure rust implementation, no external dependencies needed.
 
 ---
 
@@ -48,7 +48,7 @@ resolution of the panorama is reached.
 
 #### What it cannot do:
 
-- It does not generate a perceptual hash, like `generate.py` does
+- It does not generate a perceptual hash, like `generate.py` does.
 - It does not stitch overlapping source images together. The input image must already be a fully stitched panorama.
 
 ---
