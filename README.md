@@ -1,4 +1,3 @@
-
 # panorama-tiler
 
 Tiling and configuration generator for creating multi-resolution cubemap pyramids from equirectangular or cylindrical
@@ -7,7 +6,7 @@ panoramas, designed for use with the [Pannellum](https://pannellum.org/) web vie
 [![Crates.io](https://img.shields.io/crates/v/panorama-tiler.svg)](https://crates.io/crates/panorama-tiler)
 [![Documentation](https://docs.rs/panorama-tiler/badge.svg)](https://docs.rs/panorama-tiler)
 
-<img width="1280" height="720" alt="output" src="https://github.com/user-attachments/assets/0cb86eb1-8e19-4d18-aef4-8cae65df61ee" />
+<img width="960" alt="pano-example" src="https://github.com/user-attachments/assets/0cb86eb1-8e19-4d18-aef4-8cae65df61ee" />
 
 `panorama-tiler` transforms flat equirectangular or cylindrical panorama images into partitioned, multi-resolution zoom
 levels and outputs a companion `config.json` configuration file. It supports both complete 360-degree spheres and
@@ -49,16 +48,17 @@ resolution of the panorama is reached.
 
 #### What it cannot do:
 
-- It does not generate a perceptual hash, like `generate.py` does.
+- It does not generate a perceptual hash, like `generate.py` does. This hash can be used to show a representation of
+  the panorama while the web browser is loading it.
 - It does not stitch overlapping source images together. The input image must already be a fully stitched panorama.
 
 ---
 
-## Core Concepts
+## Concepts
 
 - **Equirectangular vs. Cylindrical**: Equirectangular projection maps coordinates linearly across latitude and
   longitude. Cylindrical projection maps coordinates onto a cylinder, requiring trigonometric scaling of vertical
-  coordinates based on focal length. An equirectangular panorama you might be familiar with is Google StreetView.
+  coordinates based on focal length. An equirectangular panorama anyone might be familiar with is Google StreetView.
 - **Direct vs. Recursive Downscaling**:
     - `Direct`: Each pyramid tier is scaled down directly from the full-resolution cubemap face. This preserves image
       sharpness but takes longer.
@@ -72,10 +72,11 @@ resolution of the panorama is reached.
 
 ## Usage
 
-### Automatic Parameter Extraction
+### Minimal config tile generation
 
-If your input image contains Exif/XMP metadata for panoramas, you can run the auto-detect pipeline. If it can't find the
-proper tags it will do a best guess estimation to find the proper configuration.
+If your input image contains Exif/XMP metadata for panoramas, you can run the auto-detect pipeline. The crate will look
+in the provided image file for panorama related Exif/XMP tags, and use it to automatically set the right configuration.
+If it can't find the tags it will do a best guess estimation to find the proper configuration.
 
 ```rust
 use panorama_tiler::{OutputConfig, OutputFormat, tile_panorama_with_guessed_angles};
@@ -147,28 +148,28 @@ fn main() -> Result<(), panorama_tiler::TilerError> {
 ## Minimal Frontend Example
 
 Once the tile pyramid is generated, host the target directory containing your tiles and the `config.json` file. You can
-then load it into Pannellum with the following client-side HTML:
+then load it into Pannellum with the following HTML.
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multires Panorama</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
-  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.js"></script>
-  <style>
-    body {
-      margin: 0;
-    }
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multires Panorama</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.css">
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.7/build/pannellum.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
 
-    #panorama {
-      width: 100vw;
-      height: 100vh;
-    }
-  </style>
+        #panorama {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
 </head>
 
 <body>
@@ -176,18 +177,15 @@ then load it into Pannellum with the following client-side HTML:
 <div id="panorama"></div>
 
 <script>
-  // Point `BASE_PATH` to the output folder generated
-  const BASE_PATH = 'tiles_output'
-  fetch(`${BASE_PATH}/config.json`)
-          .then(response => response.json())
-          .then(config => {
-            config.multiRes.basePath = BASE_PATH
-            config.autoLoad = true
-            if (config.multiRes.fallbackPath) {
-              config.multiRes.fallbackPath = 'tiles_output' + config.multiRes.fallbackPath;
-            }
-            pannellum.viewer('panorama', config);
-          });
+    // Point `BASE_PATH` to the output folder generated
+    const BASE_PATH = 'tiles_output'
+    fetch(`${BASE_PATH}/config.json`)
+            .then(response => response.json())
+            .then(config => {
+                config.multiRes.basePath = BASE_PATH
+                config.autoLoad = true
+                pannellum.viewer('panorama', config);
+            });
 </script>
 
 </body>
@@ -208,9 +206,8 @@ then load it into Pannellum with the following client-side HTML:
 
 ## Performance Measurements
 
-The pipeline is implemented using Rayon to compute cubemap pixel mappings and encode target tiles in parallel. Below is
-an indicative execution time comparison between a typical single-threaded Python pre-processing script (`generate.py`)
-and this Rust implementation on a standardized 4000x2000 equirectangular source image:
+Below is an indicative execution time comparison between the Pannellum's provided `generate.py` and this Rust
+implementation on the same equirectangular source image:
 
 | Metric                 | Python Script (`generate.py`) | Rust Implementation |
 |:-----------------------|:------------------------------|:--------------------|
