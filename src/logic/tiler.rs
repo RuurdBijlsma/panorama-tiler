@@ -1,3 +1,4 @@
+use crate::TilerError;
 use crate::config::{DownscalingMethod, TilerConfig};
 use crate::logic::b83;
 use fast_image_resize as fr;
@@ -71,7 +72,7 @@ pub fn generate_pyramid(
     config: &TilerConfig,
     clamped_tile_size: u32,
     actual_cube_size: u32,
-) -> GeneratedTiles {
+) -> Result<GeneratedTiles, TilerError> {
     let tile_size = clamped_tile_size.min(actual_cube_size);
     let face_letters = ['f', 'b', 'u', 'd', 'l', 'r'];
     let bg_color = Rgb(config.output.background_color);
@@ -242,9 +243,7 @@ pub fn generate_pyramid(
         for &(letter, ref full_face) in faces {
             let mut resized =
                 RgbImage::new(config.output.fallback_size, config.output.fallback_size);
-            resizer
-                .resize(full_face, &mut resized, Some(&resize_options))
-                .expect("Failed to resize fallback face");
+            resizer.resize(full_face, &mut resized, Some(&resize_options))?;
 
             fallback_tiles.push(FallbackItem {
                 face: letter,
@@ -253,10 +252,10 @@ pub fn generate_pyramid(
         }
     }
 
-    GeneratedTiles {
+    Ok(GeneratedTiles {
         tiles,
         fallback_tiles,
         missing_tiles_str,
         levels,
-    }
+    })
 }

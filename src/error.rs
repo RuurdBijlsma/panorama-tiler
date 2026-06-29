@@ -1,3 +1,4 @@
+use fast_image_resize::ResizeError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,4 +14,7 @@ pub enum TilerError {
 
     #[error("Invalid configuration value: {0}")]
     InvalidConfig(String),
+
+    #[error("Can't resize image: {0}")]
+    ResizeError(#[from] ResizeError)
 }
