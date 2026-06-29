@@ -10,6 +10,7 @@ homepage = "https://github.com/ruurdbijlsma/panorama-tiler"
 license = "MIT OR Apache-2.0"
 keywords = ["panorama", "pannellum", "cubemap", "tiling", "multires"]
 categories = ["multimedia::images", "rendering", "visualization"]
+exclude = ['img']
 
 [dependencies]
 image = "0.25.10"
