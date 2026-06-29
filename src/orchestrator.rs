@@ -64,7 +64,7 @@ pub fn process_panorama(
 
     // Pipeline: generate cube faces, pyramid and pannellum config
     let faces = generate_cube_faces(src_image, config, actual_cube_size);
-    let generated_tiles = generate_pyramid(&faces, config, clamped_tile_size, actual_cube_size);
+    let generated_tiles = generate_pyramid(&faces, config, clamped_tile_size, actual_cube_size)?;
     let p_config = generate_pannellum_config(
         config,
         &generated_tiles,
