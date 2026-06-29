@@ -1,3 +1,4 @@
+
 # panorama-tiler
 
 Tiling and configuration generator for creating multi-resolution cubemap pyramids from equirectangular or cylindrical
@@ -6,7 +7,7 @@ panoramas, designed for use with the [Pannellum](https://pannellum.org/) web vie
 [![Crates.io](https://img.shields.io/crates/v/panorama-tiler.svg)](https://crates.io/crates/panorama-tiler)
 [![Documentation](https://docs.rs/panorama-tiler/badge.svg)](https://docs.rs/panorama-tiler)
 
-![panorama_tiler_concept.jpg](.github/img_header.jpg)
+<img width="1280" height="720" alt="output" src="https://github.com/user-attachments/assets/0cb86eb1-8e19-4d18-aef4-8cae65df61ee" />
 
 `panorama-tiler` transforms flat equirectangular or cylindrical panorama images into partitioned, multi-resolution zoom
 levels and outputs a companion `config.json` configuration file. It supports both complete 360-degree spheres and
