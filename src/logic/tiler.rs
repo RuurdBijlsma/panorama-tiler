@@ -66,7 +66,6 @@ fn is_region_empty(
 }
 
 /// Breaks down each of the high-res faces into multi-resolution pyramids and tiles.
-#[must_use]
 pub fn generate_pyramid(
     faces: &[(char, RgbImage)],
     config: &TilerConfig,
@@ -96,7 +95,7 @@ pub fn generate_pyramid(
     let is_partial = config.angles.haov < 360.0 || config.angles.vaov < 180.0;
 
     // Generate pyramids across all faces in parallel
-    let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) = faces
+    let results = faces
         .par_iter()
         .enumerate()
         .map(|(f_idx, &(letter, ref full_face))| {
@@ -122,10 +121,8 @@ pub fn generate_pyramid(
                             let mut downscaled = RgbImage::new(size, size);
                             let source = recursive_face.as_ref().unwrap_or(full_face);
                             resizer
-                                .resize(source, &mut downscaled, Some(&resize_options))
-                                .expect("Failed to downscale cube face level recursively");
-                            recursive_face = Some(downscaled);
-                            recursive_face.as_ref().unwrap()
+                                .resize(source, &mut downscaled, Some(&resize_options))?;
+                            recursive_face.insert(downscaled)
                         }
                         DownscalingMethod::Direct => {
                             current_face_allocated = RgbImage::new(size, size);
@@ -134,8 +131,7 @@ pub fn generate_pyramid(
                                     full_face,
                                     &mut current_face_allocated,
                                     Some(&resize_options),
-                                )
-                                .expect("Failed to downscale cube face level directly");
+                                )?;
                             &current_face_allocated
                         }
                     }
@@ -173,9 +169,10 @@ pub fn generate_pyramid(
                     }
                 }
             }
-            (local_tiles, local_missing)
+            Ok::<_, TilerError>((local_tiles, local_missing))
         })
-        .unzip();
+        .collect::<Result<Vec<_>, TilerError>>();
+    let (tiles_nested, missing_nested): (Vec<Vec<TileItem>>, Vec<Vec<MissingTile>>) = results?.into_iter().unzip();
 
     let tiles: Vec<TileItem> = tiles_nested.into_iter().flatten().collect();
     let missing_tiles: Vec<MissingTile> = missing_nested.into_iter().flatten().collect();
