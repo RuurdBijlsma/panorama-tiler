@@ -1,3 +1,10 @@
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use criterion::{Criterion, SamplingMode, criterion_group, criterion_main};
 use panorama_tiler::{OutputConfig, tile_panorama_with_guessed_angles};
 use std::fs;
@@ -33,7 +40,7 @@ fn bench_end_to_end_pipeline(c: &mut Criterion) {
                 }),
             )
             .expect("Guessed-angles pipeline execution failed");
-        })
+        });
     });
 
     // Clean up

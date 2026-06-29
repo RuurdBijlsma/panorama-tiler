@@ -1,8 +1,17 @@
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::cast_possible_wrap
+)]
 use criterion::{Criterion, criterion_group, criterion_main};
 use image::{Rgb, RgbImage};
 use panorama_tiler::exif::calc_cylindrical_pano_angles;
 use panorama_tiler::{
-    OutputConfig, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces, generate_pyramid,
+    OutputConfig, OutputFormat, PanoAngles, Projection, TilerConfig, b83, generate_cube_faces,
+    generate_pyramid,
 };
 use std::hint::black_box;
 use std::time::Duration;
@@ -19,11 +28,11 @@ fn generate_synthetic_pano(width: u32, height: u32) -> RgbImage {
 fn bench_base83(c: &mut Criterion) {
     let mut group = c.benchmark_group("Base83 Encoding");
     group.bench_function("encode_single_val", |b| {
-        b.iter(|| b83::encode(black_box(&[82]), black_box(1)))
+        b.iter(|| b83::encode(black_box(&[82]), black_box(1)));
     });
     let coordinates = vec![10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
     group.bench_function("encode_array", |b| {
-        b.iter(|| b83::encode(black_box(&coordinates), black_box(2)))
+        b.iter(|| b83::encode(black_box(&coordinates), black_box(2)));
     });
     group.finish();
 }
@@ -37,7 +46,7 @@ fn bench_pano_angles(c: &mut Criterion) {
                 black_box(3000),
                 black_box(0.90),
             )
-        })
+        });
     });
 }
 
@@ -49,7 +58,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
     // Full Equirectangular
     let config_full = TilerConfig {
         output: OutputConfig {
-            format: Default::default(),
+            format: OutputFormat::default(),
             tile_size: 256,
             fallback_size: 0,
             cube_size: 256,
@@ -64,7 +73,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
                 black_box(&config_full),
                 black_box(256),
             )
-        })
+        });
     });
 
     // 2. Partial Cylindrical
@@ -89,7 +98,7 @@ fn bench_cube_face_generation(c: &mut Criterion) {
                 black_box(&config_partial_cyl),
                 black_box(256),
             )
-        })
+        });
     });
 
     group.finish();
@@ -120,7 +129,7 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
                 black_box(256),
                 black_box(256),
             )
-        })
+        });
     });
 
     // Partial configuration (forces background-check iteration and missing-tiles formatting)
@@ -148,7 +157,7 @@ fn bench_tiler_pyramid(c: &mut Criterion) {
                 black_box(256),
                 black_box(256),
             )
-        })
+        });
     });
 
     group.finish();
@@ -174,7 +183,7 @@ fn bench_full_integration(c: &mut Criterion) {
     group.bench_function("process_panorama_4k", |b| {
         b.iter(|| {
             panorama_tiler::process_panorama(black_box(&src_image), black_box(&config)).unwrap()
-        })
+        });
     });
 
     group.finish();

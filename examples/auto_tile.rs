@@ -11,11 +11,7 @@ fn main() -> Result<(), panorama_tiler::TilerError> {
         ..Default::default()
     };
 
-    tile_panorama_with_guessed_angles(
-        input_path,
-        output_dir,
-        Some(output_config),
-    )?;
+    tile_panorama_with_guessed_angles(input_path, output_dir, Some(output_config))?;
 
     Ok(())
 }

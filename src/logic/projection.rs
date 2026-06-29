@@ -4,6 +4,8 @@ use rayon::prelude::*;
 use std::f64::consts::{FRAC_PI_2, PI};
 
 /// Generates the 6 cubemap face images from an equirectangular or cylindrical input image.
+#[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn generate_cube_faces(
     src_image: &RgbImage,
     config: &TilerConfig,
@@ -44,14 +46,15 @@ pub fn generate_cube_faces(
                 .par_chunks_exact_mut(stride)
                 .enumerate()
                 .for_each(|(row, row_pixels)| {
-                    let v = (row as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
+                    let v = ((row as f64 + 0.5) / f64::from(actual_cube_size)).mul_add(2.0, -1.0);
                     for col in 0..actual_cube_size {
-                        let u = (col as f64 + 0.5) / actual_cube_size as f64 * 2.0 - 1.0;
+                        let u = ((f64::from(col) + 0.5) / f64::from(actual_cube_size))
+                            .mul_add(2.0, -1.0);
 
                         let (x2, y2, z2) = map_coords(u, v);
 
                         // Convert to a 3D unit direction ray
-                        let length = (x2 * x2 + y2 * y2 + z2 * z2).sqrt();
+                        let length = z2.mul_add(z2, y2.mul_add(y2, x2 * x2)).sqrt();
 
                         // Map the 3D vector back to spherical coordinates (yaw/pitch angles)
                         let theta = x2.atan2(z2);
@@ -62,20 +65,22 @@ pub fn generate_cube_faces(
                         // Horizontal projection mapping
                         let src_x = if config.angles.haov >= 360.0 {
                             let normalized_theta = (theta + PI) / (2.0 * PI);
-                            normalized_theta * (src_width as f64)
+                            normalized_theta * f64::from(src_width)
                         } else {
                             let half_haov = haov_rad / 2.0;
                             if theta.abs() > half_haov {
                                 is_outside = true;
                                 0.0
                             } else {
-                                let normalized_theta = (theta / half_haov + 1.0) / 2.0;
-                                normalized_theta * (src_width as f64)
+                                let normalized_theta = f64::midpoint(theta / half_haov, 1.0);
+                                normalized_theta * f64::from(src_width)
                             }
                         };
 
                         // Vertical projection mapping using angular offsets
-                        let src_y = if !is_outside {
+                        let src_y = if is_outside {
+                            0.0
+                        } else {
                             match config.angles.projection {
                                 Projection::Cylindrical => {
                                     let half_vaov = vaov_rad / 2.0;
@@ -89,13 +94,13 @@ pub fn generate_cube_faces(
                                         0.0
                                     } else {
                                         let normalized_y = y_cyl / max_y_cyl;
-                                        (1.0 - normalized_y) / 2.0 * (src_height as f64)
+                                        (1.0 - normalized_y) / 2.0 * f64::from(src_height)
                                     }
                                 }
                                 Projection::Equirectangular => {
                                     if config.angles.vaov >= 180.0 {
                                         let normalized_phi = (FRAC_PI_2 - phi) / PI;
-                                        normalized_phi * (src_height as f64)
+                                        normalized_phi * f64::from(src_height)
                                     } else {
                                         let half_vaov = vaov_rad / 2.0;
 
@@ -107,14 +112,12 @@ pub fn generate_cube_faces(
                                             0.0
                                         } else {
                                             let normalized_phi =
-                                                (phi_relative / half_vaov + 1.0) / 2.0;
-                                            (1.0 - normalized_phi) * (src_height as f64)
+                                                f64::midpoint(phi_relative / half_vaov, 1.0);
+                                            (1.0 - normalized_phi) * f64::from(src_height)
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            0.0
                         };
 
                         let pixel = if is_outside {
@@ -150,10 +153,11 @@ pub fn generate_cube_faces(
         .collect()
 }
 
+#[allow(clippy::many_single_char_names)]
 fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
     let (w, h) = img.dimensions();
-    let w_f = w as f64;
-    let h_f = h as f64;
+    let w_f = f64::from(w);
+    let h_f = f64::from(h);
 
     if y < 0.0 || y >= h_f || (!wrap_x && (x < 0.0 || x >= w_f)) {
         return bg;
@@ -201,9 +205,18 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
     let w01 = (1.0 - dx) * dy;
     let w11 = dx * dy;
 
-    let r = p00[0] as f64 * w00 + p10[0] as f64 * w10 + p01[0] as f64 * w01 + p11[0] as f64 * w11;
-    let g = p00[1] as f64 * w00 + p10[1] as f64 * w10 + p01[1] as f64 * w01 + p11[1] as f64 * w11;
-    let b = p00[2] as f64 * w00 + p10[2] as f64 * w10 + p01[2] as f64 * w01 + p11[2] as f64 * w11;
+    let r = f64::from(p11[0]).mul_add(
+        w11,
+        f64::from(p01[0]).mul_add(w01, f64::from(p10[0]).mul_add(w10, f64::from(p00[0]) * w00)),
+    );
+    let g = f64::from(p11[1]).mul_add(
+        w11,
+        f64::from(p01[1]).mul_add(w01, f64::from(p10[1]).mul_add(w10, f64::from(p00[1]) * w00)),
+    );
+    let b = f64::from(p11[2]).mul_add(
+        w11,
+        f64::from(p01[2]).mul_add(w01, f64::from(p10[2]).mul_add(w10, f64::from(p00[2]) * w00)),
+    );
 
     Rgb([
         r.round().clamp(0.0, 255.0) as u8,
@@ -215,8 +228,8 @@ fn sample_bilinear(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) ->
 /// Helper function to perform bicubic sampling.
 fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> Rgb<u8> {
     let (w, h) = img.dimensions();
-    let w_f = w as f64;
-    let h_f = h as f64;
+    let w_f = f64::from(w);
+    let h_f = f64::from(h);
 
     if y < 0.0 || y >= h_f || (!wrap_x && (x < 0.0 || x >= w_f)) {
         return bg;
@@ -242,9 +255,9 @@ fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> 
         let t2 = t * t;
         let t3 = t2 * t;
         [
-            0.5 * (-t3 + 2.0 * t2 - t),
-            0.5 * (3.0 * t3 - 5.0 * t2 + 2.0),
-            0.5 * (-3.0 * t3 + 4.0 * t2 + t),
+            0.5 * (2.0f64.mul_add(t2, -t3) - t),
+            0.5 * (5.0f64.mul_add(-t2, 3.0 * t3) + 2.0),
+            0.5 * (4.0f64.mul_add(t2, -3.0 * t3) + t),
             0.5 * (t3 - t2),
         ]
     };
@@ -291,14 +304,11 @@ fn sample_bicubic(img: &RgbImage, x: f64, y: f64, wrap_x: bool, bg: Rgb<u8>) -> 
                 continue;
             }
 
-            let pixel = match px_mapped[(i + 1) as usize] {
-                Some(px_c) => img.get_pixel(px_c, py_c),
-                None => &bg,
-            };
+            let pixel = px_mapped[(i + 1) as usize].map_or(&bg, |px_c| img.get_pixel(px_c, py_c));
 
-            r_sum += pixel[0] as f64 * weight;
-            g_sum += pixel[1] as f64 * weight;
-            b_sum += pixel[2] as f64 * weight;
+            r_sum = f64::from(pixel[0]).mul_add(weight, r_sum);
+            g_sum = f64::from(pixel[1]).mul_add(weight, g_sum);
+            b_sum = f64::from(pixel[2]).mul_add(weight, b_sum);
         }
     }
 

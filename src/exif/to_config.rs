@@ -10,12 +10,13 @@ pub struct PanoExif {
     pub cropped_area_image_height_pixels: u32,
 }
 
+#[must_use]
 pub fn exif_to_partial_pano_config(exif_info: &PanoExif) -> PanoAngles {
-    let cropped_area_img_width_pixels = exif_info.cropped_area_image_width_pixels as f64;
-    let cropped_area_image_height_pixels = exif_info.cropped_area_image_height_pixels as f64;
-    let full_pano_width_pixels = exif_info.full_pano_width_pixels as f64;
-    let full_pano_height_pixels = exif_info.full_pano_height_pixels as f64;
-    let cropped_area_top_pixels = exif_info.cropped_area_top_pixels as f64;
+    let cropped_area_img_width_pixels = f64::from(exif_info.cropped_area_image_width_pixels);
+    let cropped_area_image_height_pixels = f64::from(exif_info.cropped_area_image_height_pixels);
+    let full_pano_width_pixels = f64::from(exif_info.full_pano_width_pixels);
+    let full_pano_height_pixels = f64::from(exif_info.full_pano_height_pixels);
+    let cropped_area_top_pixels = f64::from(exif_info.cropped_area_top_pixels);
 
     // Angular views
     let haov = (cropped_area_img_width_pixels / full_pano_width_pixels) * 360.0;
@@ -33,7 +34,7 @@ pub fn exif_to_partial_pano_config(exif_info: &PanoExif) -> PanoAngles {
     let projection = exif_info
         .projection_type
         .as_deref()
-        .map_or(Projection::default(), |pt| {
+        .map_or_else(Projection::default, |pt| {
             if pt.trim().eq_ignore_ascii_case("cylindrical") {
                 Projection::Cylindrical
             } else {
@@ -66,6 +67,7 @@ pub struct DerivedAngles {
 /// * `height` - The height of the stitched image in pixels
 /// * `crop_factor` - The estimated portion of the sensor height preserved after alignment.
 ///   Typically, 0.90 (90%) for standard sweeps.
+#[must_use]
 pub fn calc_cylindrical_pano_angles(
     focal_length_35mm_eq: f64,
     width: u32,
@@ -87,7 +89,7 @@ pub fn calc_cylindrical_pano_angles(
 
     // Derive HAOV based on cylindrical projection aspect ratio math:
     // AspectRatio = haov / (2 * tan(vaov/2))
-    let aspect_ratio = width as f64 / height as f64;
+    let aspect_ratio = f64::from(width) / f64::from(height);
     let haov_rad = aspect_ratio * 2.0 * (vaov_rad / 2.0).tan();
     let haov = haov_rad.to_degrees();
 
